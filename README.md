@@ -27,12 +27,20 @@ streamlit run dashboard_app.py
 | 파일 | 역할 |
 |---|---|
 | `dashboard_app.py` | Streamlit 대시보드 메인 |
-| `_generate_sample.py` | 샘플 데이터 생성 스크립트 |
+| `_generate_sample.py` | 샘플 데이터 생성 스크립트 (일자별 파일) |
 | `_join_analysis_duckdb.py` | DuckDB 조인 분석 베이스라인 |
-| `_join_analysis.py` | pandas 버전 비교용 |
-| `channel_data.csv` | 샘플 채널 광고 raw (합성) |
-| `appsflyer_data.csv` | 샘플 AppsFlyer raw (합성) |
+| `raw/channel/YYYY-MM-DD.csv` | 일자별 채널 광고 raw (합성) |
+| `raw/appsflyer/YYYY-MM-DD.csv` | 일자별 AppsFlyer raw (합성) |
 | `CLAUDE.md` | 프로젝트 네이밍·지표·관행 문서 |
+
+### 데이터 추가 방법
+매일 수집한 CSV를 각 폴더에 `YYYY-MM-DD.csv` 로 추가하면 끝.
+DuckDB glob 패턴(`raw/channel/*.csv`)으로 자동 병합됨.
+```
+raw/
+├── channel/2025-04-17.csv    ← 새 날짜 파일 추가
+└── appsflyer/2025-04-17.csv  ← 같이 추가
+```
 
 ## 대시보드 구성
 

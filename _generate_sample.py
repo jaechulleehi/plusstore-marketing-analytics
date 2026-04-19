@@ -1,31 +1,39 @@
-"""CLAUDE.md §3 네이밍 컨벤션을 따르는 샘플 데이터 생성.
+"""CLAUDE.md §3 네이밍 컨벤션을 따르는 샘플 데이터 생성 (일자별 파일).
 
-출력:
-- channel_data.csv   : 채널분류 컬럼 포함 (외부/자체)
-- appsflyer_data.csv : 동일 캠페인·그룹·소재 구조로 조인 가능
+출력 구조:
+- raw/channel/{YYYY-MM-DD}.csv   : 날짜별 채널 광고 raw
+- raw/appsflyer/{YYYY-MM-DD}.csv : 날짜별 AppsFlyer raw
+
+DuckDB glob 패턴으로 폴더 통째로 자동 병합됨.
 """
 from __future__ import annotations
 
 import csv
 import random
+import shutil
 from datetime import date, timedelta
 from pathlib import Path
 
 random.seed(42)
-OUT_DIR = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parent
+CH_DIR = BASE / "raw" / "channel"
+AF_DIR = BASE / "raw" / "appsflyer"
+
+# 매 실행 시 깨끗하게 재생성
+if CH_DIR.exists(): shutil.rmtree(CH_DIR)
+if AF_DIR.exists(): shutil.rmtree(AF_DIR)
+CH_DIR.mkdir(parents=True, exist_ok=True)
+AF_DIR.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
 # CLAUDE.md §3-1 채널 매핑 (외부/자체 구분)
 # =============================================================================
 CHANNELS = [
-    # (채널, AppsFlyer 미디어소스, 분류)
     ("구글",  "googleadwords_int", "외부"),
     ("메타",  "Facebook Ads",      "외부"),
     ("네이버", "naver_search",     "자체"),
 ]
 
-# §3-2 캠페인 구성: 채널마다 목적별 캠페인 세팅
-# (캠페인ID, 목적)
 CAMPAIGNS = {
     "구글": [
         ("GGL_CMP_01_플러스가입", "플러스가입"),
@@ -44,7 +52,6 @@ CAMPAIGNS = {
     ],
 }
 
-# §3-4 타겟그룹 매핑 (목적별 적절한 그룹)
 GROUPS_BY_OBJECTIVE = {
     "플러스가입": ["논타겟", "유사타겟"],
     "리타겟팅":  ["리마케팅"],
@@ -56,8 +63,6 @@ GROUPS_BY_OBJECTIVE = {
     "재구매":    ["VIP", "윈백"],
 }
 
-# §3-3 소재 네이밍: {타입}_{카테고리}_{시즌}_{AB}_{버전}
-# 목적별로 어울리는 소재 조합 정의 (type, category)
 CREATIVE_POOL = {
     "플러스가입": [("VID", "플러스멤버십"), ("IMG", "플러스멤버십"),
                 ("CRS", "플러스멤버십"), ("IMG", "적립혜택")],
@@ -72,7 +77,6 @@ CREATIVE_POOL = {
 
 
 def season_for(d: date) -> str:
-    """월 기준 시즌. 블프는 11월 20일 이후, 연말은 12월."""
     m, day = d.month, d.day
     if m == 11 and day >= 20: return "블프"
     if m == 12:               return "연말"
@@ -83,8 +87,8 @@ def season_for(d: date) -> str:
     return "가을"
 
 
-def build_creative_name(typ: str, cat: str, season: str, ab: str | None, ver: int) -> str:
-    """§3-3 포맷: {타입}_{카테고리}_{시즌}_{AB}_{v버전}. AB 없으면 4파트."""
+def build_creative_name(typ: str, cat: str, season: str,
+                        ab: str | None, ver: int) -> str:
     parts = [typ, cat, season]
     if ab:
         parts.append(ab)
@@ -92,30 +96,21 @@ def build_creative_name(typ: str, cat: str, season: str, ab: str | None, ver: in
     return "_".join(parts)
 
 
-# =============================================================================
-# 채널·목적별 성과 프로파일 (CPM, CTR, 가입 CVR, 구매 CVR, AOV)
-# - 브랜드KW: CTR·CVR 매우 높음 (의도적 검색), CPC 싸서 ROAS 부풀려짐
-# - 재구매(VIP·윈백): CVR 높고 AOV 큼
-# - 리타겟팅: CVR 중상, CAC 낮음
-# =============================================================================
 PROFILE_BASE = {
     "구글":  dict(cpm=5500, ctr=0.025, signup_cvr=0.09, buy_cvr=0.30, aov=55000),
     "메타":  dict(cpm=4200, ctr=0.018, signup_cvr=0.07, buy_cvr=0.25, aov=48000),
     "네이버": dict(cpm=8000, ctr=0.045, signup_cvr=0.12, buy_cvr=0.35, aov=62000),
 }
 OBJ_MULT = {
-    # obj: (ctr_mult, signup_cvr_mult, buy_cvr_mult, aov_mult)
     "플러스가입":  (1.1, 1.3, 0.9, 1.0),
     "첫구매":     (1.0, 1.0, 1.3, 1.1),
-    "리타겟팅":   (1.4, 1.2, 1.5, 1.0),  # 인지층이라 전환 효율 높음
-    "재구매":     (1.3, 0.8, 2.0, 1.4),  # 가입은 이미 했고, 구매·AOV 큼
+    "리타겟팅":   (1.4, 1.2, 1.5, 1.0),
+    "재구매":     (1.3, 0.8, 2.0, 1.4),
     "신규유저":   (0.9, 1.0, 0.9, 0.95),
     "룩얼라이크": (1.0, 1.1, 1.0, 1.0),
-    "브랜드KW":   (3.0, 2.0, 1.5, 1.1),  # 부풀려진 ROAS 재현
+    "브랜드KW":   (3.0, 2.0, 1.5, 1.1),
     "일반KW":     (1.8, 1.3, 1.1, 1.0),
 }
-
-# AppsFlyer 어트리뷰션 드랍 (채널 대비)
 AF_CLICK    = (0.85, 0.98)
 AF_SIGNUP   = (0.70, 0.92)
 AF_PURCHASE = (0.68, 0.90)
@@ -124,34 +119,36 @@ AF_REVENUE  = (0.72, 0.93)
 START = date(2025, 1, 1)
 END   = date(2025, 3, 31)
 
-channel_rows = []
-af_rows = []
+CH_HEADER = ["일", "채널", "채널분류", "캠페인", "캠페인목적", "그룹", "소재",
+             "노출", "클릭", "비용", "회원가입", "구매", "구매매출"]
+AF_HEADER = ["일", "미디어소스", "캠페인", "그룹", "소재",
+             "클릭", "회원가입", "구매", "구매매출"]
+
+total_ch, total_af = 0, 0
 d = START
 while d <= END:
     dow_mult = 0.75 if d.weekday() >= 5 else 1.0
     boost = 1.25 if d.day <= 3 else 1.0
-    # 월급일 (10·15·25) 구매 피크
     payday_buy_mult = 1.4 if d.day in (10, 15, 25) else 1.0
     cur_season = season_for(d)
+
+    ch_rows_today = []
+    af_rows_today = []
 
     for ch, ms, ch_class in CHANNELS:
         prof_ch = PROFILE_BASE[ch]
         for cmp_id, obj in CAMPAIGNS[ch]:
             groups = GROUPS_BY_OBJECTIVE[obj]
             ctr_m, cvr_m, buy_m, aov_m = OBJ_MULT[obj]
-
             for grp in groups:
                 pool = CREATIVE_POOL[obj]
-                # 소재 고정 세트 (캠페인·그룹별로 4개)
                 for idx, (typ, cat) in enumerate(pool):
-                    # 첫 2개는 A/B 테스트 페어, 나머지는 AB 없음
                     ab = "A" if idx == 0 else ("B" if idx == 1 else None)
                     ver = 1 if idx < 2 else (idx - 1)
                     creative = build_creative_name(typ, cat, cur_season, ab, ver)
 
-                    # 노출 스케일: 채널 × 그룹 특성
                     base_impr = {"구글": 55000, "메타": 42000, "네이버": 18000}[ch]
-                    if grp in ("VIP",):     base_impr *= 0.3   # 타겟 작음
+                    if grp in ("VIP",):     base_impr *= 0.3
                     if grp == "윈백":       base_impr *= 0.5
                     if grp == "리마케팅":    base_impr *= 0.6
                     if obj == "브랜드KW":   base_impr *= 0.5
@@ -168,46 +165,42 @@ while d <= END:
                     signup_cvr = max(0.005, prof_ch["signup_cvr"] * cvr_m *
                                      random.uniform(0.7, 1.3))
                     signup = int(click * signup_cvr)
-
                     buy_cvr = max(0.05, prof_ch["buy_cvr"] * buy_m *
                                   payday_buy_mult * random.uniform(0.7, 1.3))
                     buy = int(signup * buy_cvr)
                     revenue = int(buy * prof_ch["aov"] * aov_m *
                                   random.uniform(0.8, 1.3))
 
-                    channel_rows.append([
+                    ch_rows_today.append([
                         d.isoformat(), ch, ch_class, cmp_id, obj, grp, creative,
                         impr, click, cost, signup, buy, revenue,
                     ])
-                    af_rows.append([
+                    af_rows_today.append([
                         d.isoformat(), ms, cmp_id, grp, creative,
                         int(click   * random.uniform(*AF_CLICK)),
                         int(signup  * random.uniform(*AF_SIGNUP)),
                         int(buy     * random.uniform(*AF_PURCHASE)),
                         int(revenue * random.uniform(*AF_REVENUE)),
                     ])
+
+    # 일자별 파일 저장 (utf-8-sig 로 엑셀 한글 안 깨지게)
+    day_str = d.isoformat()
+    with (CH_DIR / f"{day_str}.csv").open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f); w.writerow(CH_HEADER); w.writerows(ch_rows_today)
+    with (AF_DIR / f"{day_str}.csv").open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f); w.writerow(AF_HEADER); w.writerows(af_rows_today)
+
+    total_ch += len(ch_rows_today)
+    total_af += len(af_rows_today)
     d += timedelta(days=1)
 
-# =============================================================================
-# Write CSVs
-# =============================================================================
-ch_path = OUT_DIR / "channel_data.csv"
-with ch_path.open("w", newline="", encoding="utf-8-sig") as f:
-    w = csv.writer(f)
-    w.writerow(["일", "채널", "채널분류", "캠페인", "캠페인목적", "그룹", "소재",
-                "노출", "클릭", "비용", "회원가입", "구매", "구매매출"])
-    w.writerows(channel_rows)
-
-af_path = OUT_DIR / "appsflyer_data.csv"
-with af_path.open("w", newline="", encoding="utf-8-sig") as f:
-    w = csv.writer(f)
-    w.writerow(["일", "미디어소스", "캠페인", "그룹", "소재",
-                "클릭", "회원가입", "구매", "구매매출"])
-    w.writerows(af_rows)
-
-print(f"channel_data.csv   : {len(channel_rows):,} rows  → {ch_path}")
-print(f"appsflyer_data.csv : {len(af_rows):,} rows  → {af_path}")
+n_files = len(list(CH_DIR.glob("*.csv")))
+print(f"채널 파일    : {n_files}개  ({total_ch:,} rows 총합)  → {CH_DIR}")
+print(f"AppsFlyer    : {n_files}개  ({total_af:,} rows 총합)  → {AF_DIR}")
 print()
-print("샘플 소재명 예시:")
-for r in random.sample(channel_rows, 8):
-    print(f"  [{r[4]:>10}] {r[6]}  ({r[1]})")
+print("폴더 첫 3개 파일:")
+for p in sorted(CH_DIR.iterdir())[:3]:
+    print(f"  {p.relative_to(BASE)}")
+print("...")
+for p in sorted(CH_DIR.iterdir())[-2:]:
+    print(f"  {p.relative_to(BASE)}")

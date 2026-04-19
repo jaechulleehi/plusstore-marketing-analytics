@@ -11,23 +11,19 @@ from pathlib import Path
 import duckdb
 
 BASE = Path(__file__).resolve().parent
-CH_CSV = BASE / "channel_data.csv"
-AF_CSV = BASE / "appsflyer_data.csv"
+# 폴더 내 모든 CSV 자동 병합 (DuckDB glob)
+CH_GLOB = str(BASE / "raw" / "channel" / "*.csv")
+AF_GLOB = str(BASE / "raw" / "appsflyer" / "*.csv")
 
-# 메모리 DB 세션 (파일로 저장하고 싶으면 duckdb.connect("mktg.duckdb"))
 con = duckdb.connect(":memory:")
 
-# =============================================================================
-# 0) 뷰 등록 — CSV를 "테이블처럼" 쓸 수 있게 매핑 (실제 로드는 쿼리 시점)
-# =============================================================================
 con.execute(f"""
 CREATE VIEW channel AS
-SELECT * FROM read_csv_auto('{CH_CSV}');
+SELECT DISTINCT * FROM read_csv_auto('{CH_GLOB}', union_by_name=true);
 
 CREATE VIEW appsflyer AS
-SELECT * FROM read_csv_auto('{AF_CSV}');
+SELECT DISTINCT * FROM read_csv_auto('{AF_GLOB}', union_by_name=true);
 
--- 네이밍 매핑 테이블 (실무에서 이 딕셔너리를 어디에 두느냐가 관건)
 CREATE TABLE channel_map (채널 VARCHAR, 미디어소스 VARCHAR);
 INSERT INTO channel_map VALUES
     ('구글',  'googleadwords_int'),

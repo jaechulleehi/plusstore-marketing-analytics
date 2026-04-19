@@ -26,8 +26,9 @@ st.set_page_config(
 )
 
 BASE = Path(__file__).resolve().parent
-CH_CSV = BASE / "channel_data.csv"
-AF_CSV = BASE / "appsflyer_data.csv"
+# 폴더 내 모든 CSV 자동 병합 (매일 파일 추가 시 새로고침만 하면 반영)
+CH_GLOB = str(BASE / "raw" / "channel" / "*.csv")
+AF_GLOB = str(BASE / "raw" / "appsflyer" / "*.csv")
 
 # CLAUDE.md §3-1
 CHANNEL_COLOR = {"구글": "#4285F4", "메타": "#1877F2", "네이버": "#03C75A"}
@@ -65,9 +66,15 @@ def fmt_num(v):
 @st.cache_data(ttl=3600)
 def load_joined() -> pd.DataFrame:
     con = duckdb.connect(":memory:")
+    # read_csv_auto + glob + union_by_name=true: 폴더 내 모든 파일 자동 병합
+    # 같은 (일, 캠페인, 그룹, 소재) 중복은 DISTINCT 로 방어
     con.execute(f"""
-    CREATE VIEW channel AS SELECT * FROM read_csv_auto('{CH_CSV}');
-    CREATE VIEW appsflyer AS SELECT * FROM read_csv_auto('{AF_CSV}');
+    CREATE VIEW channel AS
+    SELECT DISTINCT * FROM read_csv_auto('{CH_GLOB}', union_by_name=true);
+
+    CREATE VIEW appsflyer AS
+    SELECT DISTINCT * FROM read_csv_auto('{AF_GLOB}', union_by_name=true);
+
     CREATE TABLE channel_map (채널 VARCHAR, 미디어소스 VARCHAR);
     INSERT INTO channel_map VALUES
         ('구글', 'googleadwords_int'), ('메타', 'Facebook Ads'),
