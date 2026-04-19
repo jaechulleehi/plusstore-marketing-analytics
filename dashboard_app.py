@@ -68,9 +68,13 @@ CUSTOM_CSS = """
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
 
-html, body, [class*="css"], [class*="st-"] {
+/* 텍스트 엘리먼트만 Pretendard. 아이콘 span 은 Streamlit 기본 icon font 유지 */
+.stApp, .stMarkdown, .stText, .stCaption,
+h1, h2, h3, h4, h5, h6, p, label, li, td, th,
+[data-testid="stMetricLabel"], [data-testid="stMetricValue"],
+[data-testid="stMetricDelta"], [data-testid="stDataFrame"] {
     font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
-                 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif !important;
+                 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 }
 
 /* KPI 카드 - 둥글고 hover 효과 */
@@ -290,8 +294,10 @@ with st.sidebar:
 # =============================================================================
 # Apply filters
 # =============================================================================
-d_from, d_to = (d_range if isinstance(d_range, tuple) and len(d_range) == 2
-                else (min_d, max_d))
+if not (isinstance(d_range, (tuple, list)) and len(d_range) == 2):
+    st.info("📅 시작일·종료일 둘 다 선택해줘.")
+    st.stop()
+d_from, d_to = d_range
 
 mask = (
     (df_all["일"] >= pd.Timestamp(d_from)) & (df_all["일"] <= pd.Timestamp(d_to))
@@ -359,10 +365,8 @@ def generate_insights(df: pd.DataFrame) -> list[dict]:
                             sub="원인 분석 필요. 소재 교체 또는 예산 재분배 검토."))
 
     # 2) 채널별 최고/최저 ROAS
-    ch_roas = df.groupby("채널").apply(
-        lambda g: g[revenue_col].sum() / g["비용"].sum() if g["비용"].sum() else 0,
-        include_groups=False,
-    )
+    ch_sum = df.groupby("채널")[[revenue_col, "비용"]].sum()
+    ch_roas = (ch_sum[revenue_col] / ch_sum["비용"].replace(0, pd.NA)).dropna()
     if len(ch_roas) >= 2:
         top_ch = ch_roas.idxmax()
         bot_ch = ch_roas.idxmin()
@@ -436,26 +440,27 @@ roas = (k["revenue"] / k["spend"]) if k["spend"] else 0
 af_cov = (df["가입_AF"].sum() / df["가입_채널"].sum() * 100
           if df["가입_채널"].sum() else 0)
 
-# WoW 비교용
+# WoW 비교: 최근 7일 vs 직전 7일 (전체 기간이 14일 이상일 때만 의미)
 max_date = df["일"].max()
-split_date = max_date - timedelta(days=7)
-prev_start = split_date - timedelta(days=7)
-df_recent = df[df["일"] > split_date]
-df_prev = df[(df["일"] <= split_date) & (df["일"] > prev_start)]
-
+min_date_in_df = df["일"].min()
 delta_roas = None
 delta_cac = None
 delta_spend = None
-if not df_prev.empty and not df_recent.empty:
-    kr = compute_kpis(df_recent)
-    kp = compute_kpis(df_prev)
-    rr = kr["revenue"] / kr["spend"] if kr["spend"] else 0
-    rp = kp["revenue"] / kp["spend"] if kp["spend"] else 0
-    delta_roas = fmt_pct_delta(rr, rp)
-    cr = kr["spend"] / kr["signup"] if kr["signup"] else 0
-    cp = kp["spend"] / kp["signup"] if kp["signup"] else 0
-    delta_cac = fmt_pct_delta(cr, cp)
-    delta_spend = fmt_pct_delta(kr["spend"], kp["spend"])
+if (max_date - min_date_in_df).days >= 14:
+    split_date = max_date - timedelta(days=7)
+    prev_start = split_date - timedelta(days=7)
+    df_recent = df[df["일"] > split_date]
+    df_prev = df[(df["일"] <= split_date) & (df["일"] > prev_start)]
+    if not df_prev.empty and not df_recent.empty:
+        kr = compute_kpis(df_recent)
+        kp = compute_kpis(df_prev)
+        rr = kr["revenue"] / kr["spend"] if kr["spend"] else 0
+        rp = kp["revenue"] / kp["spend"] if kp["spend"] else 0
+        delta_roas = fmt_pct_delta(rr, rp)
+        cr = kr["spend"] / kr["signup"] if kr["signup"] else 0
+        cp = kp["spend"] / kp["signup"] if kp["signup"] else 0
+        delta_cac = fmt_pct_delta(cr, cp)
+        delta_spend = fmt_pct_delta(kr["spend"], kp["spend"])
 
 with st.container(horizontal=True):
     st.metric("총 광고비", fmt_won(k["spend"]), delta=delta_spend,
@@ -516,25 +521,37 @@ with tab_home:
             비용=("비용", "sum"), 매출=(revenue_col, "sum"),
             가입=(signup_col, "sum"),
         ).reset_index()
-        ch_kpi["ROAS"] = ch_kpi["매출"] / ch_kpi["비용"]
+        ch_kpi["ROAS"] = ch_kpi["매출"] / ch_kpi["비용"].replace(0, pd.NA)
         ch_kpi["CAC"] = ch_kpi["비용"] / ch_kpi["가입"].replace(0, pd.NA)
 
-        for _, r in ch_kpi.sort_values("ROAS", ascending=False).iterrows():
+        def render_ch_card(r):
             color = CHANNEL_COLOR.get(r["채널"], "#888")
             tag = "자체" if r["채널분류"] == "자체" else "외부"
-            status, sev = roas_status(r["ROAS"])
+            status, _ = roas_status(r["ROAS"]) if not pd.isna(r["ROAS"]) else ("-", "info")
             with st.container(border=True):
                 c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
                 c1.markdown(
-                    f"<div style='font-weight:700;font-size:1.05rem;color:{color}'>"
-                    f"● {r['채널']}</div>"
-                    f"<div style='color:#6B7280;font-size:0.8rem'>{tag} 매체</div>",
+                    f"<div style='font-weight:700;font-size:1.05rem;color:{color};"
+                    f"border-left:3px solid {color};padding-left:8px'>"
+                    f"{r['채널']}</div>"
+                    f"<div style='color:#6B7280;font-size:0.8rem;"
+                    f"padding-left:11px'>{tag} 매체</div>",
                     unsafe_allow_html=True)
-                c2.metric("ROAS", f"{r['ROAS']:.2f}")
+                c2.metric("ROAS", f"{r['ROAS']:.2f}" if not pd.isna(r["ROAS"]) else "-")
                 c3.metric("CAC", fmt_won(r["CAC"]))
-                c4.markdown(
-                    f"<div style='margin-top:18px'>{status}</div>",
-                    unsafe_allow_html=True)
+                c4.markdown(f"<div style='margin-top:18px'>{status}</div>",
+                            unsafe_allow_html=True)
+
+        # §6-1: 외부와 자체 분리 표기
+        ext = ch_kpi[ch_kpi["채널분류"] == "외부"].sort_values("ROAS", ascending=False)
+        own = ch_kpi[ch_kpi["채널분류"] == "자체"].sort_values("ROAS", ascending=False)
+
+        if not ext.empty:
+            st.caption("외부 매체")
+            for _, r in ext.iterrows(): render_ch_card(r)
+        if not own.empty:
+            st.caption("자체 매체 (외부 비교에서 분리, §6-1)")
+            for _, r in own.iterrows(): render_ch_card(r)
 
     st.divider()
 
@@ -562,7 +579,7 @@ with tab_home:
             hovermode="x unified",
             plot_bgcolor="white",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 # -----------------------------------------------------------------------------
@@ -595,7 +612,7 @@ with tab_trend:
                 yaxis2=dict(title="매출", overlaying="y", side="right"),
                 legend=dict(orientation="h", y=1.12),
                 hovermode="x unified", plot_bgcolor="white")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
     with col_ch:
         with st.container(border=True):
@@ -603,8 +620,8 @@ with tab_trend:
             by_ch = df.groupby(["채널", "채널분류"]).agg(
                 비용=("비용", "sum"), 매출=(revenue_col, "sum"),
             ).reset_index()
-            by_ch["ROAS"] = by_ch["매출"] / by_ch["비용"]
-            by_ch = by_ch.sort_values("ROAS", ascending=True)
+            by_ch["ROAS"] = by_ch["매출"] / by_ch["비용"].replace(0, pd.NA)
+            by_ch = by_ch.dropna(subset=["ROAS"]).sort_values("ROAS", ascending=True)
 
             fig = go.Figure()
             fig.add_bar(
@@ -624,7 +641,7 @@ with tab_trend:
                 height=420, margin=dict(l=10, r=10, t=30, b=10),
                 xaxis_title=f"ROAS ({basis_label})",
                 plot_bgcolor="white", showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
 
 # -----------------------------------------------------------------------------
@@ -636,7 +653,7 @@ with tab_obj:
         비용=("비용", "sum"), 가입=(signup_col, "sum"),
         매출=(revenue_col, "sum"), 노출=("노출", "sum"),
     ).reset_index()
-    by_obj["ROAS"] = (by_obj["매출"] / by_obj["비용"]).round(2)
+    by_obj["ROAS"] = (by_obj["매출"] / by_obj["비용"].replace(0, pd.NA)).round(2)
     by_obj["CAC"] = (by_obj["비용"] / by_obj["가입"].replace(0, pd.NA)).round(0)
     by_obj["비용비중(%)"] = (by_obj["비용"] / by_obj["비용"].sum() * 100).round(1)
     by_obj["매출비중(%)"] = (by_obj["매출"] / by_obj["매출"].sum() * 100).round(1)
@@ -654,7 +671,7 @@ with tab_obj:
         fig.update_layout(height=420, margin=dict(l=10, r=10, t=30, b=10),
                           coloraxis_showscale=False, yaxis_title=None,
                           plot_bgcolor="white")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with c2, st.container(border=True):
         st.subheader("비용 배분 vs 매출 배분")
@@ -667,13 +684,13 @@ with tab_obj:
                           margin=dict(l=10, r=10, t=30, b=10),
                           legend=dict(orientation="h", y=1.15),
                           plot_bgcolor="white")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with st.container(border=True):
         st.subheader("목적별 상세")
         st.dataframe(
             by_obj[["캠페인목적", "비용", "비용비중(%)", "가입", "CAC", "매출", "ROAS"]],
-            hide_index=True, use_container_width=True,
+            hide_index=True, width='stretch',
             column_config={
                 "비용": st.column_config.NumberColumn(format="₩%d"),
                 "CAC": st.column_config.NumberColumn(format="₩%d"),
@@ -714,7 +731,7 @@ with tab_creative:
             fig.update_layout(height=360, margin=dict(l=5, r=5, t=10, b=10),
                               yaxis=dict(title=None, autorange="reversed"),
                               coloraxis_showscale=False, plot_bgcolor="white")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
     with st.container(border=True):
         st.subheader("카테고리 × 소재타입 ROAS")
@@ -728,7 +745,7 @@ with tab_creative:
                         color_continuous_midpoint=ROAS_GOOD, aspect="auto")
         fig.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10),
                           coloraxis_colorbar=dict(title="ROAS"))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 
 # -----------------------------------------------------------------------------
@@ -752,18 +769,27 @@ with tab_ab:
         index=grouping, columns="AB",
         values=["노출", "클릭", "가입", "매출", "비용"],
     ).reset_index()
-    wide.columns = [f"{m}_{l}" if l else m for m, l in wide.columns]
+    # MultiIndex 평탄화 (NaN·빈 문자열 모두 안전)
+    wide.columns = [
+        f"{m}_{l}" if (isinstance(l, str) and l) else m
+        for m, l in wide.columns
+    ]
 
     required_cols = ["노출_A", "노출_B", "클릭_A", "클릭_B",
                      "비용_A", "비용_B", "매출_A", "매출_B"]
     missing = [c for c in required_cols if c not in wide.columns]
-    if missing:
-        wide = wide.reindex(columns=list(wide.columns) + missing)
-    wide = wide.dropna(subset=required_cols)
-    wide = wide[(wide["비용_A"] > 0) & (wide["비용_B"] > 0)
-                & (wide["노출_A"] > 0) & (wide["노출_B"] > 0)]
-
     rows = []
+    if missing:
+        st.info(
+            "현재 필터 조건에 A·B 양쪽 데이터가 모두 있는 페어가 없어. "
+            f"(누락 컬럼: {', '.join(missing)}) 필터를 넓혀봐."
+        )
+        wide = wide.iloc[0:0]  # empty, skip loop safely
+    else:
+        wide = wide.dropna(subset=required_cols)
+        wide = wide[(wide["비용_A"] > 0) & (wide["비용_B"] > 0)
+                    & (wide["노출_A"] > 0) & (wide["노출_B"] > 0)]
+
     for _, r in wide.iterrows():
         roas_a = r["매출_A"] / r["비용_A"]
         roas_b = r["매출_B"] / r["비용_B"]
@@ -807,11 +833,11 @@ with tab_ab:
                     margin=dict(l=10, r=10, t=10, b=10),
                     legend=dict(orientation="h", y=1.08),
                     plot_bgcolor="white")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
         with st.container(border=True):
             st.subheader("A/B 전체 표")
-            st.dataframe(ab_df, hide_index=True, use_container_width=True)
+            st.dataframe(ab_df, hide_index=True, width='stretch')
 
 
 # -----------------------------------------------------------------------------
@@ -822,7 +848,7 @@ with tab_group:
         비용=("비용", "sum"), 가입=(signup_col, "sum"),
         매출=(revenue_col, "sum"), 노출=("노출", "sum"),
     ).reset_index()
-    by_grp["ROAS"] = (by_grp["매출"] / by_grp["비용"]).round(2)
+    by_grp["ROAS"] = (by_grp["매출"] / by_grp["비용"].replace(0, pd.NA)).round(2)
     by_grp["CAC"] = (by_grp["비용"] / by_grp["가입"].replace(0, pd.NA)).round(0)
 
     c1, c2 = st.columns(2)
@@ -835,7 +861,7 @@ with tab_group:
         fig.update_traces(textposition="outside")
         fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10),
                           coloraxis_showscale=False, plot_bgcolor="white")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with c2, st.container(border=True):
         st.subheader("그룹별 CAC")
@@ -846,12 +872,12 @@ with tab_group:
         fig.update_traces(textposition="outside")
         fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10),
                           coloraxis_showscale=False, plot_bgcolor="white")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with st.container(border=True):
         st.dataframe(
             by_grp[["그룹", "비용", "노출", "가입", "CAC", "매출", "ROAS"]],
-            hide_index=True, use_container_width=True,
+            hide_index=True, width='stretch',
             column_config={
                 "비용": st.column_config.NumberColumn(format="₩%d"),
                 "CAC": st.column_config.NumberColumn(format="₩%d"),
@@ -867,9 +893,9 @@ with tab_rank:
         비용=("비용", "sum"), 클릭=("클릭", "sum"), 노출=("노출", "sum"),
         가입=(signup_col, "sum"), 매출=(revenue_col, "sum"),
     ).reset_index()
-    rank["CTR(%)"] = (rank["클릭"] / rank["노출"] * 100).round(2)
+    rank["CTR(%)"] = (rank["클릭"] / rank["노출"].replace(0, pd.NA) * 100).round(2)
     rank["CAC"] = (rank["비용"] / rank["가입"].replace(0, pd.NA)).round(0)
-    rank["ROAS"] = (rank["매출"] / rank["비용"]).round(2)
+    rank["ROAS"] = (rank["매출"] / rank["비용"].replace(0, pd.NA)).round(2)
     rank["상태"] = rank["ROAS"].apply(
         lambda r: "🟢 양호" if r >= ROAS_GOOD
         else ("🔴 개선 필요" if r < ROAS_BAD else "🟡 관찰"))
@@ -879,7 +905,7 @@ with tab_rank:
 
     with st.container(border=True):
         st.dataframe(
-            rank, hide_index=True, use_container_width=True,
+            rank, hide_index=True, width='stretch',
             column_config={
                 "비용": st.column_config.NumberColumn(format="₩%d"),
                 "CAC": st.column_config.NumberColumn(format="₩%d"),
@@ -919,7 +945,7 @@ with tab_raw:
         mask_search = pd.Series(False, index=df_show.index)
         for c in text_cols:
             mask_search |= df_show[c].astype(str).str.contains(
-                search, case=False, na=False)
+                search, case=False, na=False, regex=False)
         df_show = df_show[mask_search]
 
     c1, c2, c3 = st.columns(3)
@@ -931,7 +957,7 @@ with tab_raw:
         st.dataframe(
             df_show,
             hide_index=True,
-            use_container_width=True,
+            width='stretch',
             height=560,
             column_config={
                 "일": st.column_config.DateColumn(format="YYYY-MM-DD"),
@@ -961,7 +987,8 @@ st.markdown(
     f"<div style='text-align:center; color:#9CA3AF; font-size:0.8rem; "
     f"margin-top: 2rem; padding: 1rem;'>"
     f"📌 CLAUDE.md §3·5·6 반영  ·  ROAS 임계값: 🟢 ≥{ROAS_GOOD} / 🔴 &lt;{ROAS_BAD} "
-    f"·  A/B 최소노출: {AB_MIN_IMPR:,}"
+    f"·  A/B 최소노출: {AB_MIN_IMPR:,}  ·  "
+    f"지표 기준: AppsFlyer 샘플의 단일 구매매출 (D7 상정)"
     f"</div>",
     unsafe_allow_html=True,
 )
