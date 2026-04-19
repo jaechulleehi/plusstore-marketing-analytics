@@ -1,0 +1,25 @@
+# Generated outputs (regenerable via scripts)
+joined_result.csv
+joined_result.parquet
+summary_by_channel.csv
+summary_by_campaign.csv
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
