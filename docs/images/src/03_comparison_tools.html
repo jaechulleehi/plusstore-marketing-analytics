@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>HTML vs Streamlit vs Looker Studio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 18px 40px 14px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 20px 40px 0; display: flex; flex-direction: column; }
+  .table-wrap { flex: 1; display: flex; flex-direction: column; }
+  /* Header row */
+  .col-headers { display: flex; gap: 0; margin-bottom: 0; }
+  .row-label-cell { width: 160px; flex-shrink: 0; }
+  .col-header {
+    flex: 1; padding: 14px 20px; text-align: center; border-radius: 12px 12px 0 0;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    margin: 0 6px;
+  }
+  .col-header-icon { font-size: 24px; }
+  .col-header-title { font-size: 16px; font-weight: 800; color: #fff; }
+  .col-header-sub { font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.8); }
+  .col-html { background: #374151; }
+  .col-streamlit { background: #03C75A; }
+  .col-looker { background: #4285F4; }
+  /* Table rows */
+  .table-rows { display: flex; flex-direction: column; gap: 0; }
+  .table-row {
+    display: flex; align-items: stretch;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .table-row:last-child { border-bottom: none; }
+  .row-label-cell {
+    width: 160px; flex-shrink: 0;
+    padding: 13px 16px 13px 0;
+    display: flex; align-items: center;
+  }
+  .row-label {
+    font-size: 12px; font-weight: 700; color: #6B7280; letter-spacing: 0.03em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .row-label-icon { font-size: 15px; }
+  .table-cell {
+    flex: 1; margin: 0 6px; padding: 13px 16px;
+    background: #FFFFFF; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 13px; color: #1F2937; font-weight: 500;
+    line-height: 1.4;
+  }
+  .table-row:last-child .table-cell { border-radius: 0 0 0 0; }
+  .cell-html { background: #F9FAFB; color: #4B5563; }
+  .cell-streamlit { background: #F0FDF4; color: #065F46; font-weight: 600; }
+  .cell-looker { background: #EFF6FF; color: #1E40AF; }
+  .badge-good { display: inline-block; background: #DCFCE7; color: #16A34A; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 2px; }
+  .badge-mid { display: inline-block; background: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 2px; }
+  .badge-bad { display: inline-block; background: #FEE2E2; color: #991B1B; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 2px; }
+  .footer-banner {
+    background: linear-gradient(135deg, #03C75A, #00A84D);
+    padding: 14px 40px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .footer-banner-icon { font-size: 22px; }
+  .footer-banner-text { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.4; }
+  .footer-banner-sub { font-size: 12px; color: rgba(255,255,255,0.85); }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 3</span>
+  <h1>HTML vs Streamlit vs Looker Studio</h1>
+  <span class="header-sub">도구 선택 비교표</span>
+</div>
+
+<div class="content">
+  <div class="table-wrap">
+    <div class="col-headers">
+      <div class="row-label-cell"></div>
+      <div class="col-header col-html">
+        <span class="col-header-icon">📄</span>
+        <span class="col-header-title">HTML</span>
+        <span class="col-header-sub">정적 파일</span>
+      </div>
+      <div class="col-header col-streamlit">
+        <span class="col-header-icon">🐍</span>
+        <span class="col-header-title">Streamlit</span>
+        <span class="col-header-sub">실행 중인 프로그램</span>
+      </div>
+      <div class="col-header col-looker">
+        <span class="col-header-icon">📊</span>
+        <span class="col-header-title">Looker Studio</span>
+        <span class="col-header-sub">SaaS (구글 운영)</span>
+      </div>
+    </div>
+
+    <div class="table-rows">
+      <div class="table-row">
+        <div class="row-label-cell">
+          <div class="row-label"><span class="row-label-icon">🏷️</span> 정체</div>
+        </div>
+        <div class="table-cell cell-html">정적 파일</div>
+        <div class="table-cell cell-streamlit">실행 중인 프로그램</div>
+        <div class="table-cell cell-looker">SaaS (구글 운영)</div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-cell">
+          <div class="row-label"><span class="row-label-icon">🗄️</span> 데이터 처리</div>
+        </div>
+        <div class="table-cell cell-html"><span class="badge-bad">불가</span></div>
+        <div class="table-cell cell-streamlit"><span class="badge-good">pandas 직접 사용</span></div>
+        <div class="table-cell cell-looker"><span class="badge-mid">제한적</span></div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-cell">
+          <div class="row-label"><span class="row-label-icon">📚</span> 학습 비용</div>
+        </div>
+        <div class="table-cell cell-html"><span class="badge-mid">중</span> HTML / JS 필요</div>
+        <div class="table-cell cell-streamlit"><span class="badge-good">낮음</span> Python만</div>
+        <div class="table-cell cell-looker"><span class="badge-good">낮음</span> 드래그앤드롭</div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-cell">
+          <div class="row-label"><span class="row-label-icon">🔗</span> 공유 방법</div>
+        </div>
+        <div class="table-cell cell-html">파일 전달</div>
+        <div class="table-cell cell-streamlit">서버 필요</div>
+        <div class="table-cell cell-looker"><span class="badge-good">자동 URL</span></div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-cell">
+          <div class="row-label"><span class="row-label-icon">🔧</span> 커스텀 분석</div>
+        </div>
+        <div class="table-cell cell-html"><span class="badge-mid">제한적</span></div>
+        <div class="table-cell cell-streamlit"><span class="badge-good">무한</span> (파이썬)</div>
+        <div class="table-cell cell-looker"><span class="badge-mid">제한적</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-banner">
+  <span class="footer-banner-icon">🎯</span>
+  <div>
+    <div class="footer-banner-text">퍼포먼스 마케터에겐 Streamlit</div>
+    <div class="footer-banner-sub">Python으로 무한 커스텀, 로컬 데이터 직접 분석</div>
+  </div>
+</div>
+</body>
+</html>

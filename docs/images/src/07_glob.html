@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>glob 패턴 자동 병합</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 22px 36px 16px; display: flex; flex-direction: column; gap: 16px; }
+  .flow-row { flex: 1; display: flex; align-items: stretch; gap: 0; }
+  /* Panels */
+  .panel {
+    flex: 1; border-radius: 14px; overflow: hidden;
+    border: 2px solid #E5E7EB; display: flex; flex-direction: column;
+  }
+  .panel-header {
+    padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+    background: #374151;
+  }
+  .ph-icon { font-size: 18px; }
+  .ph-title { font-size: 13px; font-weight: 800; color: #fff; }
+  .ph-sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-left: auto; }
+  .panel-body { background: #1F2937; flex: 1; padding: 16px 18px; font-family: 'Courier New', monospace; }
+  .folder-tree { font-size: 12px; color: #9CA3AF; line-height: 1.9; }
+  .folder-name { color: #60A5FA; font-weight: 700; }
+  .file-name { color: #86EFAC; }
+  .file-name-dim { color: #6B7280; }
+  .tree-stats {
+    margin-top: 10px; padding: 8px 12px; background: rgba(255,255,255,0.06);
+    border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+  }
+  .stat-item { font-size: 11px; color: #D1D5DB; display: flex; gap: 8px; align-items: center; }
+  /* Center arrow */
+  .center-arrow {
+    width: 180px; flex-shrink: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; padding: 8px 12px;
+  }
+  .big-arrow { font-size: 36px; color: #03C75A; }
+  .code-block {
+    background: #1F2937; border-radius: 10px; padding: 12px 14px;
+    width: 100%;
+  }
+  .code-line { font-family: 'Courier New', monospace; font-size: 10.5px; color: #86EFAC; line-height: 1.7; }
+  .code-key { color: #93C5FD; }
+  .code-str { color: #FCA5A5; }
+  .code-param { color: #FDE68A; }
+  /* Right panel */
+  .panel-green .panel-header { background: linear-gradient(135deg, #03C75A, #059669); }
+  .panel-green { border-color: #03C75A; }
+  .panel-green .panel-body { background: #F0FDF4; }
+  .result-stat {
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px; padding: 12px; margin-bottom: 12px;
+    background: #DCFCE7; border-radius: 10px; border: 1.5px solid #86EFAC;
+  }
+  .result-num { font-size: 32px; font-weight: 900; color: #03C75A; letter-spacing: -0.03em; }
+  .result-label { font-size: 12px; font-weight: 700; color: #065F46; }
+  .feature-list { display: flex; flex-direction: column; gap: 8px; }
+  .feature-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; background: #FFFFFF; border-radius: 8px;
+    border: 1px solid #BBF7D0; font-size: 12px; color: #1F2937; font-weight: 600;
+  }
+  .fi-icon { font-size: 16px; }
+  /* Footer banner */
+  .footer-banner {
+    background: linear-gradient(135deg, #03C75A, #059669);
+    border-radius: 10px; padding: 11px 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .fb-icon { font-size: 20px; }
+  .fb-text { font-size: 13px; font-weight: 700; color: #fff; }
+  .fb-badge {
+    margin-left: auto; background: rgba(255,255,255,0.2);
+    color: #fff; font-size: 11px; font-weight: 700;
+    padding: 4px 12px; border-radius: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 7</span>
+  <h1>glob 패턴 자동 병합</h1>
+  <span class="header-sub">수십~수백 개 CSV를 한 줄 쿼리로 통합</span>
+</div>
+
+<div class="content">
+  <div class="flow-row">
+    <!-- Left: Folder tree -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="ph-icon">📁</span>
+        <span class="ph-title">raw/channel/ 폴더</span>
+        <span class="ph-sub">일별 CSV 파일</span>
+      </div>
+      <div class="panel-body">
+        <div class="folder-tree">
+          <div><span class="folder-name">raw/channel/</span></div>
+          <div>&nbsp;├── <span class="file-name">2025-01-01.csv</span></div>
+          <div>&nbsp;├── <span class="file-name">2025-01-02.csv</span></div>
+          <div>&nbsp;├── <span class="file-name">2025-01-03.csv</span></div>
+          <div>&nbsp;├── <span class="file-name-dim">...</span></div>
+          <div>&nbsp;├── <span class="file-name">2025-02-28.csv</span></div>
+          <div>&nbsp;├── <span class="file-name-dim">...</span></div>
+          <div>&nbsp;└── <span class="file-name">2025-03-31.csv</span></div>
+        </div>
+        <div class="tree-stats">
+          <div class="stat-item">📄 총 90개 파일</div>
+          <div class="stat-item">📊 합계 3,420행 데이터</div>
+          <div class="stat-item">⚠️ 수동 UNION 불필요</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center arrow + code -->
+    <div class="center-arrow">
+      <div class="big-arrow">➜</div>
+      <div class="code-block">
+        <div class="code-line"><span class="code-key">SELECT</span> <span class="code-param">*</span></div>
+        <div class="code-line"><span class="code-key">FROM</span></div>
+        <div class="code-line">&nbsp;<span class="code-str">read_csv_auto(</span></div>
+        <div class="code-line">&nbsp;&nbsp;<span class="code-str">'raw/channel/</span></div>
+        <div class="code-line">&nbsp;&nbsp;<span class="code-str">*.csv'</span>,</div>
+        <div class="code-line">&nbsp;&nbsp;<span class="code-param">union_by_name</span></div>
+        <div class="code-line">&nbsp;&nbsp;= <span class="code-key">true</span></div>
+        <div class="code-line"><span class="code-str">)</span></div>
+      </div>
+      <div style="font-size:10px;color:#6B7280;text-align:center;line-height:1.5;">
+        스키마 자동 통일<br>파일 추가만 하면 OK
+      </div>
+    </div>
+
+    <!-- Right: Result panel -->
+    <div class="panel panel-green">
+      <div class="panel-header">
+        <span class="ph-icon">⚡</span>
+        <span class="ph-title">자동 병합된 단일 VIEW</span>
+        <span class="ph-sub">DuckDB 인메모리</span>
+      </div>
+      <div class="panel-body">
+        <div class="result-stat">
+          <span class="result-num">3,420행</span>
+          <span class="result-label">전체 데이터 자동 통합</span>
+        </div>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="fi-icon">🔗</span>
+            90개 파일 자동 UNION
+          </div>
+          <div class="feature-item">
+            <span class="fi-icon">📐</span>
+            스키마 자동 통일 (union_by_name)
+          </div>
+          <div class="feature-item">
+            <span class="fi-icon">🔍</span>
+            DISTINCT로 중복 행 제거
+          </div>
+          <div class="feature-item">
+            <span class="fi-icon">📅</span>
+            날짜 파티션 자동 인식
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-banner">
+    <span class="fb-icon">✅</span>
+    <span class="fb-text">매일 새 CSV 추가만 하면 → 대시보드 자동 갱신 — 코드 수정 불필요</span>
+    <span class="fb-badge">자동화 완성</span>
+  </div>
+</div>
+</body>
+</html>

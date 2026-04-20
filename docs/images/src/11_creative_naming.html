@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>소재 네이밍 5속성 파싱</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #FF6B35; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 18px 40px 14px; display: flex; flex-direction: column; gap: 20px; }
+  /* Top: naming decompose */
+  .naming-section { display: flex; flex-direction: column; gap: 16px; }
+  .naming-title { font-size: 12px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.08em; text-transform: uppercase; }
+  .naming-display {
+    display: flex; align-items: center; gap: 0;
+    background: #1F2937; border-radius: 14px; padding: 20px 28px;
+    justify-content: center;
+  }
+  .seg-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .seg-box {
+    font-size: 26px; font-weight: 900; padding: 10px 20px; border-radius: 10px;
+    letter-spacing: -0.02em; border: 2px solid transparent;
+  }
+  .seg-arrow { font-size: 18px; margin: 2px 0; }
+  .seg-label {
+    font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 8px;
+    white-space: nowrap;
+  }
+  .sep { font-size: 26px; font-weight: 900; color: #4B5563; margin: 0 4px; padding-bottom: 40px; }
+  /* Colors per segment */
+  .s1 { background: #7C3AED20; color: #A78BFA; border-color: #7C3AED50; }
+  .s1-label { background: #EDE9FE; color: #5B21B6; }
+  .s1-arrow { color: #7C3AED; }
+  .s2 { background: #0369A120; color: #38BDF8; border-color: #0369A150; }
+  .s2-label { background: #E0F2FE; color: #0369A1; }
+  .s2-arrow { color: #0369A1; }
+  .s3 { background: #03C75A20; color: #4ADE80; border-color: #03C75A50; }
+  .s3-label { background: #DCFCE7; color: #14532D; }
+  .s3-arrow { color: #03C75A; }
+  .s4 { background: #F59E0B20; color: #FCD34D; border-color: #F59E0B50; }
+  .s4-label { background: #FEF3C7; color: #92400E; }
+  .s4-arrow { color: #F59E0B; }
+  .s5 { background: #EF444420; color: #FCA5A5; border-color: #EF444450; }
+  .s5-label { background: #FEE2E2; color: #991B1B; }
+  .s5-arrow { color: #EF4444; }
+  /* Table */
+  .table-section { flex: 1; }
+  .attr-table { width: 100%; border-radius: 12px; overflow: hidden; border: 1.5px solid #E5E7EB; border-collapse: collapse; }
+  .attr-table th {
+    padding: 10px 14px; font-size: 12px; font-weight: 800;
+    text-align: left; border-bottom: 1.5px solid #E5E7EB;
+  }
+  .attr-table td {
+    padding: 9px 14px; font-size: 11px; font-weight: 500; color: #374151;
+    border-bottom: 1px solid #F3F4F6; background: #FFFFFF;
+    vertical-align: top; line-height: 1.6;
+  }
+  .attr-table tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; margin: 1px; }
+  /* Footer */
+  .footer-note {
+    background: #1F2937; border-radius: 10px; padding: 10px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .fn-icon { font-size: 18px; }
+  .fn-text { font-size: 13px; font-weight: 700; color: #fff; }
+  .fn-arrow { color: #4B5563; font-size: 14px; }
+  .fn-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 8px; background: #03C75A; color: #fff; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">NAMING</span>
+  <h1>소재 네이밍 5속성 파싱</h1>
+  <span class="header-sub">구조화된 소재명 → 속성별 ROAS 분석</span>
+</div>
+
+<div class="content">
+  <div class="naming-section">
+    <div class="naming-title">소재명 분해 예시</div>
+    <div class="naming-display">
+      <div class="seg-wrap">
+        <div class="seg-box s1">VID</div>
+        <div class="seg-arrow s1-arrow">↓</div>
+        <div class="seg-label s1-label">소재타입</div>
+      </div>
+      <div class="sep">_</div>
+      <div class="seg-wrap">
+        <div class="seg-box s2">플러스멤버십</div>
+        <div class="seg-arrow s2-arrow">↓</div>
+        <div class="seg-label s2-label">소재카테고리</div>
+      </div>
+      <div class="sep">_</div>
+      <div class="seg-wrap">
+        <div class="seg-box s3">겨울</div>
+        <div class="seg-arrow s3-arrow">↓</div>
+        <div class="seg-label s3-label">시즌</div>
+      </div>
+      <div class="sep">_</div>
+      <div class="seg-wrap">
+        <div class="seg-box s4">A</div>
+        <div class="seg-arrow s4-arrow">↓</div>
+        <div class="seg-label s4-label">A/B 그룹</div>
+      </div>
+      <div class="sep">_</div>
+      <div class="seg-wrap">
+        <div class="seg-box s5">v2</div>
+        <div class="seg-arrow s5-arrow">↓</div>
+        <div class="seg-label s5-label">버전</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <table class="attr-table">
+      <thead>
+        <tr>
+          <th style="background:#EDE9FE;color:#5B21B6;">소재타입</th>
+          <th style="background:#E0F2FE;color:#0369A1;">소재카테고리</th>
+          <th style="background:#DCFCE7;color:#14532D;">시즌</th>
+          <th style="background:#FEF3C7;color:#92400E;">A/B</th>
+          <th style="background:#FEE2E2;color:#991B1B;">버전</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="tag" style="background:#EDE9FE;color:#5B21B6;">IMG</span>
+            <span class="tag" style="background:#EDE9FE;color:#5B21B6;">VID</span>
+            <span class="tag" style="background:#EDE9FE;color:#5B21B6;">CRS</span>
+            <span class="tag" style="background:#EDE9FE;color:#5B21B6;">GIF</span>
+            <span class="tag" style="background:#EDE9FE;color:#5B21B6;">TXT</span>
+          </td>
+          <td>
+            <span class="tag" style="background:#E0F2FE;color:#0369A1;">플러스멤버십</span>
+            <span class="tag" style="background:#E0F2FE;color:#0369A1;">적립혜택</span>
+            <span class="tag" style="background:#E0F2FE;color:#0369A1;">배송혜택</span>
+            <span class="tag" style="background:#E0F2FE;color:#0369A1;">할인쿠폰</span>
+            <span class="tag" style="background:#E0F2FE;color:#0369A1;">특가</span>
+            <span class="tag" style="background:#E0F2FE;color:#0369A1;">신상품</span>
+          </td>
+          <td>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">상시</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">봄</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">여름</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">가을</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">겨울</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">블프</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">연말</span>
+            <span class="tag" style="background:#DCFCE7;color:#14532D;">신학기</span>
+          </td>
+          <td>
+            <span class="tag" style="background:#FEF3C7;color:#92400E;">A</span>
+            <span class="tag" style="background:#FEF3C7;color:#92400E;">B</span>
+            <span class="tag" style="background:#F3F4F6;color:#6B7280;">없음</span>
+          </td>
+          <td>
+            <span class="tag" style="background:#FEE2E2;color:#991B1B;">v1</span>
+            <span class="tag" style="background:#FEE2E2;color:#991B1B;">v2</span>
+            <span class="tag" style="background:#FEE2E2;color:#991B1B;">v3</span>
+            <span class="tag" style="background:#FEE2E2;color:#991B1B;">v4...</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer-note">
+    <span class="fn-icon">🐍</span>
+    <span class="fn-text">소재명.split('_') → 5개 파생 컬럼 생성</span>
+    <span class="fn-arrow">→</span>
+    <span class="fn-badge">속성별 ROAS 분석 가능</span>
+    <span style="margin-left:auto;font-size:11px;color:#6B7280;">예: VID 소재 평균 ROAS vs IMG 소재 비교 → 소재 타입 전략 수립</span>
+  </div>
+</div>
+</body>
+</html>

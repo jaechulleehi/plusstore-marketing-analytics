@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>전체 실습 여정 타임라인</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA;
+    display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF;
+    border-bottom: 2px solid #E5E7EB;
+    padding: 18px 40px 14px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge {
+    background: #03C75A; color: #fff;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+  .header h1 {
+    font-size: 22px; font-weight: 800;
+    color: #1F2937; letter-spacing: -0.03em;
+  }
+  .header-sub {
+    font-size: 13px; color: #6B7280; font-weight: 500;
+    margin-left: auto;
+  }
+  .content {
+    flex: 1; padding: 24px 32px 20px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .row-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    color: #6B7280; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .row-wrap {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .cards-row {
+    display: flex; gap: 10px; align-items: stretch;
+  }
+  .card {
+    flex: 1; background: #FFFFFF;
+    border-radius: 10px; padding: 12px 10px 11px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border: 1.5px solid #E5E7EB;
+    position: relative; min-height: 110px;
+    transition: box-shadow 0.2s;
+  }
+  .card-badge {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.06em;
+    padding: 2px 7px; border-radius: 20px;
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .card-emoji {
+    font-size: 22px; margin-top: 20px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 700; text-align: center;
+    line-height: 1.4; color: #1F2937;
+  }
+  /* Row 1: gray/blue */
+  .card-row1 { border-color: #DBEAFE; background: #EFF6FF; }
+  .card-row1 .card-badge { background: #BFDBFE; color: #1E40AF; }
+  .card-row1:nth-child(1) { border-color: #E5E7EB; background: #F9FAFB; }
+  .card-row1:nth-child(1) .card-badge { background: #E5E7EB; color: #374151; }
+  /* Row 2: green */
+  .card-row2 { border-color: #BBF7D0; background: #F0FDF4; }
+  .card-row2 .card-badge { background: #86EFAC; color: #14532D; }
+  .connector {
+    display: flex; align-items: center; justify-content: center;
+    color: #9CA3AF; font-size: 14px; flex-shrink: 0;
+    width: 16px;
+  }
+  .row-divider {
+    display: flex; align-items: center; gap: 10px;
+    padding: 2px 0;
+  }
+  .divider-line {
+    flex: 1; height: 1px; background: #E5E7EB;
+  }
+  .divider-label {
+    font-size: 10px; color: #9CA3AF; font-weight: 600;
+    white-space: nowrap; letter-spacing: 0.05em;
+  }
+  .footer-bar {
+    background: #FFFFFF; border-top: 1.5px solid #E5E7EB;
+    padding: 10px 40px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; color: #6B7280; font-weight: 500;
+  }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">OVERVIEW</span>
+  <h1>전체 실습 여정 타임라인</h1>
+  <span class="header-sub">Part 0 – 13 · 총 14개 파트</span>
+</div>
+
+<div class="content">
+  <div class="row-wrap">
+    <div class="row-label">이해 단계 — Parts 0 ~ 6</div>
+    <div class="cards-row">
+      <div class="card card-row1" style="background:#F9FAFB;border-color:#E5E7EB;">
+        <span class="card-badge" style="background:#E5E7EB;color:#374151;">Part 0</span>
+        <span class="card-emoji">🤔</span>
+        <span class="card-title">왜<br>대시보드</span>
+      </div>
+      <div class="connector">›</div>
+      <div class="card card-row1">
+        <span class="card-badge">Part 1</span>
+        <span class="card-emoji">📦</span>
+        <span class="card-title">Streamlit<br>스킬</span>
+      </div>
+      <div class="connector">›</div>
+      <div class="card card-row1">
+        <span class="card-badge">Part 2</span>
+        <span class="card-emoji">🎯</span>
+        <span class="card-title">첫<br>대시보드</span>
+      </div>
+      <div class="connector">›</div>
+      <div class="card card-row1">
+        <span class="card-badge">Part 3</span>
+        <span class="card-emoji">⚖️</span>
+        <span class="card-title">도구<br>비교</span>
+      </div>
+      <div class="connector">›</div>
+      <div class="card card-row1">
+        <span class="card-badge">Part 4</span>
+        <span class="card-emoji">🌍</span>
+        <span class="card-title">데이터<br>전략</span>
+      </div>
+      <div class="connector">›</div>
+      <div class="card card-row1">
+        <span class="card-badge">Part 5</span>
+        <span class="card-emoji">📝</span>
+        <span class="card-title">샘플<br>CSV</span>
+      </div>
+      <div class="connector">›</div>
+      <div class="card card-row1">
+        <span class="card-badge">Part 6</span>
+        <span class="card-emoji">🔗</span>
+        <span class="card-title">조인<br>분석</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-divider">
+    <div class="divider-line"></div>
+    <div class="divider-label">▼ 실습 · 배포 단계로 전환</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="row-wrap">
+    <div class="row-label">실습 · 배포 단계 — Parts 7 ~ 13</div>
+    <div class="cards-row">
+      <div class="card card-row2">
+        <span class="card-badge">Part 7</span>
+        <span class="card-emoji">📦</span>
+        <span class="card-title">Parquet</span>
+      </div>
+      <div class="connector" style="color:#03C75A;">›</div>
+      <div class="card card-row2">
+        <span class="card-badge">Part 8</span>
+        <span class="card-emoji">📋</span>
+        <span class="card-title">CLAUDE<br>.md</span>
+      </div>
+      <div class="connector" style="color:#03C75A;">›</div>
+      <div class="card card-row2">
+        <span class="card-badge">Part 9</span>
+        <span class="card-emoji">🖥️</span>
+        <span class="card-title">대시보드<br>v1</span>
+      </div>
+      <div class="connector" style="color:#03C75A;">›</div>
+      <div class="card card-row2">
+        <span class="card-badge">Part 10</span>
+        <span class="card-emoji">📁</span>
+        <span class="card-title">폴더<br>구조</span>
+      </div>
+      <div class="connector" style="color:#03C75A;">›</div>
+      <div class="card card-row2">
+        <span class="card-badge">Part 11</span>
+        <span class="card-emoji">✨</span>
+        <span class="card-title">UI<br>리뉴얼</span>
+      </div>
+      <div class="connector" style="color:#03C75A;">›</div>
+      <div class="card card-row2">
+        <span class="card-badge">Part 12</span>
+        <span class="card-emoji">🔍</span>
+        <span class="card-title">코드<br>리뷰</span>
+      </div>
+      <div class="connector" style="color:#03C75A;">›</div>
+      <div class="card card-row2" style="border-color:#03C75A; background:#DCFCE7; box-shadow:0 0 0 2px #03C75A33;">
+        <span class="card-badge" style="background:#03C75A;color:#fff;">Part 13</span>
+        <span class="card-emoji">🚀</span>
+        <span class="card-title">GitHub<br>배포</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#BFDBFE;"></div>
+    이해 단계 (Parts 0–6)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#86EFAC;"></div>
+    실습·배포 단계 (Parts 7–13)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#03C75A;"></div>
+    최종 목표: GitHub 배포
+  </div>
+  <span style="margin-left:auto;font-size:11px;color:#9CA3AF;">마케팅 애널리틱스 강의 · 퍼포먼스 마케터를 위한 Python 대시보드</span>
+</div>
+</body>
+</html>

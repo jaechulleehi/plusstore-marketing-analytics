@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>ngrok vs 클라우드 배포</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #7C3AED; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 16px 36px 14px; display: flex; flex-direction: column; gap: 14px; }
+  /* Two column layout */
+  .two-cols { display: flex; gap: 20px; align-items: stretch; flex: 1; }
+  .col-panel {
+    flex: 1; border-radius: 14px; overflow: hidden; border: 2px solid;
+    display: flex; flex-direction: column;
+  }
+  .col-ngrok { border-color: #7C3AED; }
+  .col-cloud { border-color: #03C75A; }
+  .col-panel-header {
+    padding: 14px 20px; display: flex; align-items: center; gap: 10px;
+  }
+  .cph-ngrok { background: linear-gradient(135deg, #7C3AED, #5B21B6); }
+  .cph-cloud { background: linear-gradient(135deg, #03C75A, #059669); }
+  .cph-icon { font-size: 22px; }
+  .cph-title { font-size: 16px; font-weight: 800; color: #fff; }
+  .cph-sub { font-size: 11px; color: rgba(255,255,255,0.8); margin-left: auto; }
+  /* Architecture diagram */
+  .arch-diagram {
+    background: #1F2937; padding: 12px 16px;
+    display: flex; align-items: center; gap: 6px; justify-content: center;
+    flex-wrap: nowrap;
+  }
+  .arch-node {
+    background: rgba(255,255,255,0.1); border-radius: 7px; padding: 6px 10px;
+    font-size: 10px; color: #E5E7EB; font-weight: 600; text-align: center;
+    white-space: nowrap; border: 1px solid rgba(255,255,255,0.15);
+  }
+  .arch-arrow { color: #6B7280; font-size: 14px; }
+  /* Rows */
+  .col-rows { background: #FFFFFF; flex: 1; }
+  .row-item { display: flex; border-bottom: 1px solid #F3F4F6; }
+  .row-item:last-child { border-bottom: none; }
+  .ri-label { width: 110px; flex-shrink: 0; padding: 11px 14px; font-size: 11px; font-weight: 700; color: #9CA3AF; background: #F9FAFB; display: flex; align-items: center; border-right: 1px solid #F3F4F6; }
+  .ri-value { flex: 1; padding: 11px 14px; font-size: 12px; color: #1F2937; font-weight: 600; display: flex; align-items: center; line-height: 1.4; }
+  .ri-value-ngrok { color: #5B21B6; }
+  .ri-value-cloud { color: #065F46; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; margin-left: 6px; }
+  /* Footer */
+  .footer-row { display: flex; gap: 20px; }
+  .footer-card {
+    flex: 1; border-radius: 10px; padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .fc-ngrok { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); border: 1.5px solid #C4B5FD; }
+  .fc-cloud { background: linear-gradient(135deg, #DCFCE7, #BBF7D0); border: 1.5px solid #86EFAC; }
+  .fc-icon { font-size: 22px; }
+  .fc-text { font-size: 12px; font-weight: 700; }
+  .fc-text-ngrok { color: #4C1D95; }
+  .fc-text-cloud { color: #064E3B; }
+  .fc-sub { font-size: 11px; font-weight: 500; }
+  .fc-sub-ngrok { color: #7C3AED; }
+  .fc-sub-cloud { color: #03C75A; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 13</span>
+  <h1>ngrok vs 클라우드 배포 — 공유 방법 비교</h1>
+  <span class="header-sub">임시 데모 vs 상시 운영 선택 기준</span>
+</div>
+
+<div class="content">
+  <div class="two-cols">
+    <!-- ngrok -->
+    <div class="col-panel col-ngrok">
+      <div class="col-panel-header cph-ngrok">
+        <span class="cph-icon">🔗</span>
+        <span class="cph-title">ngrok 터널</span>
+        <span class="cph-sub">로컬 → 인터넷 임시 연결</span>
+      </div>
+      <div class="arch-diagram">
+        <div class="arch-node">💻 내 맥<br>앱 실행</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🔗 ngrok<br>터널</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🌐 인터넷</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">👤 사용자</div>
+      </div>
+      <div class="col-rows">
+        <div class="row-item">
+          <div class="ri-label">앱 실행 위치</div>
+          <div class="ri-value ri-value-ngrok">💻 내 맥</div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">맥 꺼지면</div>
+          <div class="ri-value ri-value-ngrok">❌ 즉시 끊김</div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">URL</div>
+          <div class="ri-value ri-value-ngrok" style="font-size:11px;">임시 랜덤 URL<br><span style="color:#9CA3AF;">재시작마다 변경</span></div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">성능</div>
+          <div class="ri-value ri-value-ngrok" style="font-size:11px;">내 맥·Wi-Fi 품질 의존</div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">비용</div>
+          <div class="ri-value ri-value-ngrok">무료<span class="badge" style="background:#EDE9FE;color:#5B21B6;">5분 데모용</span></div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">비유</div>
+          <div class="ri-value ri-value-ngrok">🏠 "집 창문 뚫기"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloud -->
+    <div class="col-panel col-cloud">
+      <div class="col-panel-header cph-cloud">
+        <span class="cph-icon">☁️</span>
+        <span class="cph-title">Streamlit Cloud</span>
+        <span class="cph-sub">GitHub 연동 자동 배포</span>
+      </div>
+      <div class="arch-diagram">
+        <div class="arch-node">🐙 GitHub<br>레포</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">⚡ Streamlit<br>Cloud 서버</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">🌐 인터넷</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node">👤 사용자</div>
+      </div>
+      <div class="col-rows">
+        <div class="row-item">
+          <div class="ri-label">앱 실행 위치</div>
+          <div class="ri-value ri-value-cloud">☁️ 원격 서버</div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">맥 꺼지면</div>
+          <div class="ri-value ri-value-cloud">✅ 계속 운영</div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">URL</div>
+          <div class="ri-value ri-value-cloud" style="font-size:11px;">고정 도메인<br><span style="color:#9CA3AF;">share.streamlit.io/...</span></div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">성능</div>
+          <div class="ri-value ri-value-cloud" style="font-size:11px;">서버 스펙 기반 안정적</div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">비용</div>
+          <div class="ri-value ri-value-cloud">무료~유료<span class="badge" style="background:#DCFCE7;color:#166534;">공개 앱 무료</span></div>
+        </div>
+        <div class="row-item">
+          <div class="ri-label">비유</div>
+          <div class="ri-value ri-value-cloud">🏢 "사무실 이전"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-row">
+    <div class="footer-card fc-ngrok">
+      <span class="fc-icon">🔗</span>
+      <div>
+        <div class="fc-text fc-text-ngrok">ngrok 추천 상황</div>
+        <div class="fc-sub fc-sub-ngrok">데모 발표 · 팀 임시 공유 · 로컬 테스트 공유</div>
+      </div>
+    </div>
+    <div class="footer-card fc-cloud">
+      <span class="fc-icon">☁️</span>
+      <div>
+        <div class="fc-text fc-text-cloud">클라우드 추천 상황</div>
+        <div class="fc-sub fc-sub-cloud">상시 운영 · 고정 URL 공유 · 팀 대시보드 배포</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

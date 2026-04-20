@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Parquet vs CSV</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 18px 40px 14px; display: flex; gap: 28px; }
+  /* Comparison table */
+  .table-wrap { flex: 1; display: flex; flex-direction: column; }
+  .col-headers { display: flex; gap: 12px; margin-bottom: 0; }
+  .row-label-col { width: 140px; flex-shrink: 0; }
+  .col-header {
+    flex: 1; padding: 14px 20px; border-radius: 12px 12px 0 0;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+  }
+  .ch-icon { font-size: 26px; }
+  .ch-title { font-size: 16px; font-weight: 800; color: #fff; }
+  .ch-sub { font-size: 11px; color: rgba(255,255,255,0.85); }
+  .col-parquet { background: linear-gradient(135deg, #03C75A, #059669); }
+  .col-csv { background: linear-gradient(135deg, #374151, #6B7280); }
+  .table-rows { flex: 1; display: flex; flex-direction: column; }
+  .table-row { display: flex; align-items: stretch; border-bottom: 1px solid #E5E7EB; gap: 12px; }
+  .table-row:last-child { border-bottom: none; }
+  .row-label-col { width: 140px; flex-shrink: 0; padding: 12px 10px 12px 0; display: flex; align-items: center; }
+  .row-label-text { font-size: 12px; font-weight: 700; color: #6B7280; display: flex; align-items: center; gap: 5px; }
+  .table-cell {
+    flex: 1; padding: 12px 16px; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 13px; font-weight: 600; line-height: 1.4;
+  }
+  .cell-parquet { background: #F0FDF4; color: #065F46; }
+  .cell-csv { background: #F9FAFB; color: #374151; }
+  .check { color: #03C75A; font-size: 16px; font-weight: 800; }
+  .cross { color: #EF4444; font-size: 16px; }
+  .neutral { color: #9CA3AF; }
+  /* Right stat panel */
+  .stat-panel {
+    width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;
+    justify-content: center;
+  }
+  .big-stat {
+    background: linear-gradient(135deg, #03C75A, #059669);
+    border-radius: 16px; padding: 24px 16px; text-align: center;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .bs-num { font-size: 42px; font-weight: 900; color: #fff; letter-spacing: -0.04em; }
+  .bs-label { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9); }
+  .bs-detail { font-size: 11px; color: rgba(255,255,255,0.75); }
+  .size-compare {
+    background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E5E7EB;
+    padding: 14px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .sc-label { font-size: 10px; font-weight: 700; color: #9CA3AF; text-align: center; letter-spacing: 0.05em; }
+  .sc-bar { height: 28px; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 700; }
+  /* Footer */
+  .footer-banner {
+    background: #1F2937; padding: 11px 40px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .fb-icon { font-size: 18px; }
+  .fb-left { font-size: 13px; font-weight: 700; color: #fff; }
+  .fb-sep { color: #4B5563; font-size: 18px; }
+  .fb-right { font-size: 12px; color: #9CA3AF; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 7</span>
+  <h1>Parquet vs CSV — 파일 형식 선택 기준</h1>
+  <span class="header-sub">내부 파이프라인 vs 공유·엑셀 출력</span>
+</div>
+
+<div class="content">
+  <div class="table-wrap">
+    <div class="col-headers">
+      <div class="row-label-col"></div>
+      <div class="col-header col-parquet">
+        <span class="ch-icon">🟢</span>
+        <span class="ch-title">Parquet</span>
+        <span class="ch-sub">컬럼형 바이너리 포맷</span>
+      </div>
+      <div class="col-header col-csv">
+        <span class="ch-icon">📄</span>
+        <span class="ch-title">CSV</span>
+        <span class="ch-sub">텍스트 기반 범용 포맷</span>
+      </div>
+    </div>
+    <div class="table-rows">
+      <div class="table-row">
+        <div class="row-label-col"><div class="row-label-text">👁️ 사람이 읽기</div></div>
+        <div class="table-cell cell-parquet"><span class="cross">❌</span>&nbsp; 바이너리 — 전용 뷰어 필요</div>
+        <div class="table-cell cell-csv"><span class="check">✅</span>&nbsp; 텍스트 에디터·엑셀</div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-col"><div class="row-label-text">💾 파일 용량</div></div>
+        <div class="table-cell cell-parquet"><span class="check">✅</span>&nbsp; 1/3 ~ 1/10 압축</div>
+        <div class="table-cell cell-csv"><span class="neutral">기본 (무압축)</span></div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-col"><div class="row-label-text">⚡ 읽기 속도</div></div>
+        <div class="table-cell cell-parquet"><span class="check">✅</span>&nbsp; 수십 배 빠름</div>
+        <div class="table-cell cell-csv"><span class="neutral">느림 (전체 스캔)</span></div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-col"><div class="row-label-text">🏷️ 타입 보존</div></div>
+        <div class="table-cell cell-parquet"><span class="check">✅</span>&nbsp; 날짜·숫자 타입 유지</div>
+        <div class="table-cell cell-csv"><span class="cross">❌</span>&nbsp; 모두 문자열로 저장</div>
+      </div>
+      <div class="table-row">
+        <div class="row-label-col"><div class="row-label-text">📌 부분 읽기</div></div>
+        <div class="table-cell cell-parquet"><span class="check">✅</span>&nbsp; 필요한 컬럼만 로드</div>
+        <div class="table-cell cell-csv"><span class="cross">❌</span>&nbsp; 전체 파일 로드 필요</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right stat panel -->
+  <div class="stat-panel">
+    <div class="big-stat">
+      <span class="bs-num">3.6×</span>
+      <span class="bs-label">더 작음</span>
+      <span class="bs-detail">실측 비교 결과</span>
+    </div>
+    <div class="size-compare">
+      <div class="sc-label">파일 용량 비교</div>
+      <div class="sc-bar" style="background:#FEE2E2;color:#991B1B;width:100%;">CSV 362KB ←</div>
+      <div class="sc-bar" style="background:#DCFCE7;color:#166534;width:28%;">102KB</div>
+      <div style="font-size:10px;color:#9CA3AF;text-align:center;">Parquet</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-banner">
+  <span class="fb-icon">💡</span>
+  <span class="fb-left">내부 파이프라인 = Parquet</span>
+  <span class="fb-sep">←→</span>
+  <span class="fb-right">공유·엑셀 출력 = CSV (utf-8-sig 인코딩으로 한글 깨짐 방지)</span>
+</div>
+</body>
+</html>

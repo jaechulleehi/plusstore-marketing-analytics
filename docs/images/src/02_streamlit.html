@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>Streamlit 동작 원리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA;
+    display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 18px 40px 14px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.05em; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 28px 48px 24px; display: flex; flex-direction: column; gap: 24px; }
+  .flow-row {
+    display: flex; align-items: center; gap: 0;
+  }
+  .flow-box {
+    flex: 1; background: #FFFFFF; border-radius: 14px;
+    padding: 22px 20px 18px; border: 2px solid #E5E7EB;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    min-height: 170px; justify-content: center;
+  }
+  .flow-box .box-icon { font-size: 32px; }
+  .flow-box .box-title { font-size: 15px; font-weight: 800; color: #1F2937; text-align: center; }
+  .flow-box .box-subtitle { font-size: 12px; color: #6B7280; font-weight: 500; text-align: center; line-height: 1.5; }
+  .flow-box .code-tag {
+    background: #1F2937; color: #86EFAC; font-family: 'Courier New', monospace;
+    font-size: 12px; padding: 6px 12px; border-radius: 6px; letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
+  .box-gray { border-color: #D1D5DB; background: #F9FAFB; }
+  .box-green { border-color: #03C75A; background: #F0FDF4; }
+  .box-blue { border-color: #BFDBFE; background: #EFF6FF; }
+  .box-green .box-title { color: #064E3B; }
+  .box-blue .box-title { color: #1E40AF; }
+  .arrow-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    width: 80px; flex-shrink: 0;
+  }
+  .arrow-label { font-size: 10px; font-weight: 700; color: #6B7280; letter-spacing: 0.05em; text-align: center; }
+  .arrow-line { display: flex; align-items: center; width: 100%; }
+  .arrow-shaft { flex: 1; height: 2.5px; background: #9CA3AF; }
+  .arrow-head { width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 12px solid #9CA3AF; }
+  .double-arrow { display: flex; flex-direction: column; gap: 5px; }
+  .arrow-line-rev { flex-direction: row-reverse; }
+  .arrow-head-rev { width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 12px solid #4285F4; }
+  .arrow-shaft-blue { background: #4285F4; }
+  .arrow-shaft-rev { background: #4285F4; }
+  .arrow-head-fwd { border-left-color: #4285F4; }
+  .arrow-label-blue { color: #4285F4; }
+  .cards-row { display: flex; gap: 16px; }
+  .key-card {
+    flex: 1; background: #FFFFFF; border-radius: 12px; border: 1.5px solid #E5E7EB;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .key-card-num {
+    width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .key-card-title { font-size: 13px; font-weight: 700; color: #1F2937; }
+  .key-card-desc { font-size: 12px; color: #6B7280; line-height: 1.5; }
+  .key-card-code { font-family: 'Courier New', monospace; font-size: 11px; background: #F3F4F6; color: #1F2937; padding: 5px 9px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 1</span>
+  <h1>Streamlit 동작 원리</h1>
+  <span class="header-sub">Python 스크립트 → 웹앱 변환 메커니즘</span>
+</div>
+
+<div class="content">
+  <div class="flow-row">
+    <!-- Box 1 -->
+    <div class="flow-box box-gray">
+      <span class="box-icon">🐍</span>
+      <span class="box-title">Python 스크립트</span>
+      <div class="code-tag">streamlit run app.py</div>
+      <span class="box-subtitle">일반 .py 파일<br>pandas · DuckDB 직접 사용</span>
+    </div>
+
+    <!-- Arrow 1 -->
+    <div class="arrow-wrap">
+      <div class="arrow-line">
+        <div class="arrow-shaft"></div>
+        <div class="arrow-head"></div>
+      </div>
+      <span class="arrow-label">실행</span>
+    </div>
+
+    <!-- Box 2 -->
+    <div class="flow-box box-green">
+      <span class="box-icon">⚙️</span>
+      <span class="box-title">Streamlit 서버</span>
+      <span class="box-subtitle" style="color:#065F46;">포트 8502<br>파이썬을 웹서버로 감쌈<br>위젯 상태 관리</span>
+    </div>
+
+    <!-- Arrow 2 (double) -->
+    <div class="arrow-wrap" style="width:90px;">
+      <div class="double-arrow" style="width:100%;">
+        <div class="arrow-line">
+          <div class="arrow-shaft arrow-shaft-blue"></div>
+          <div class="arrow-head arrow-head-fwd"></div>
+        </div>
+        <div class="arrow-line arrow-line-rev">
+          <div class="arrow-shaft arrow-shaft-rev"></div>
+          <div class="arrow-head-rev"></div>
+        </div>
+      </div>
+      <span class="arrow-label arrow-label-blue">WebSocket<br>실시간</span>
+    </div>
+
+    <!-- Box 3 -->
+    <div class="flow-box box-blue">
+      <span class="box-icon">🌐</span>
+      <span class="box-title">브라우저</span>
+      <div class="code-tag" style="background:#1E3A8A;color:#93C5FD;">http://localhost:8502</div>
+      <span class="box-subtitle" style="color:#1E40AF;">자동 렌더링<br>UI 위젯 표시</span>
+    </div>
+  </div>
+
+  <div class="cards-row">
+    <div class="key-card">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="key-card-num" style="background:#EF4444;">①</div>
+        <span class="key-card-title">필터 변경 → 전체 재실행</span>
+      </div>
+      <div class="key-card-desc">위젯(슬라이더·드롭다운) 조작 시마다<br>Python 스크립트 처음부터 재실행</div>
+      <div class="key-card-code">st.selectbox() → 스크립트 재실행 → 결과 갱신</div>
+    </div>
+    <div class="key-card">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="key-card-num" style="background:#F59E0B;">②</div>
+        <span class="key-card-title">@st.cache_data 로 캐시</span>
+      </div>
+      <div class="key-card-desc">무거운 데이터 로드는 캐시 데코레이터로<br>재실행 시 불필요한 I/O 방지</div>
+      <div class="key-card-code">@st.cache_data<br>def load_data(): ...</div>
+    </div>
+    <div class="key-card">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="key-card-num" style="background:#03C75A;">③</div>
+        <span class="key-card-title">HTML·JS 없이 Python만</span>
+      </div>
+      <div class="key-card-desc">프론트엔드 지식 없이<br>Python 함수 호출만으로 풍부한 웹앱 구성</div>
+      <div class="key-card-code">st.bar_chart() · st.dataframe() · st.metric()</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

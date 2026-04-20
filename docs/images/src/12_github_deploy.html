@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>GitHub → Streamlit Cloud 배포 흐름</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 22px 36px 16px; display: flex; flex-direction: column; gap: 20px; }
+  /* Flow row */
+  .flow-row { display: flex; align-items: stretch; gap: 0; }
+  .step-card {
+    flex: 1; border-radius: 14px; border: 2px solid #E5E7EB;
+    background: #FFFFFF; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .step-top {
+    padding: 14px 16px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    flex: 1; justify-content: center;
+  }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; color: #fff; flex-shrink: 0; align-self: flex-start;
+  }
+  .step-icon { font-size: 32px; }
+  .step-title { font-size: 13px; font-weight: 800; color: #1F2937; text-align: center; line-height: 1.3; }
+  .step-sub { font-size: 11px; color: #6B7280; text-align: center; line-height: 1.4; }
+  .step-footer {
+    padding: 8px 12px; text-align: center; font-size: 11px; font-weight: 700;
+    border-top: 1px solid #F3F4F6;
+  }
+  /* Manual step */
+  .step-manual { border-color: #E5E7EB; }
+  .step-manual .step-footer { background: #F9FAFB; color: #9CA3AF; }
+  /* git push step */
+  .step-push { border-color: #03C75A; }
+  .step-push .step-footer { background: #DCFCE7; color: #14532D; }
+  /* GitHub step */
+  .step-github { border-color: #1F2937; }
+  .step-github .step-footer { background: #1F2937; color: #9CA3AF; }
+  /* Build step */
+  .step-build { border-color: #4285F4; }
+  .step-build .step-footer { background: #EFF6FF; color: #1E40AF; }
+  /* Deploy step */
+  .step-deploy { border-color: #03C75A; background: linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%); box-shadow: 0 0 0 3px rgba(3,199,90,0.15); }
+  .step-deploy .step-footer { background: #03C75A; color: #fff; }
+  /* Arrows */
+  .step-arrow {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 64px; flex-shrink: 0; gap: 4px; padding: 4px;
+  }
+  .sa-label { font-size: 9px; font-weight: 700; color: #9CA3AF; text-align: center; line-height: 1.3; letter-spacing: 0.04em; }
+  .sa-arrow { display: flex; align-items: center; width: 100%; }
+  .sa-shaft { flex: 1; height: 2px; }
+  .sa-head { width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+  .arr-gray .sa-shaft { background: #D1D5DB; }
+  .arr-gray .sa-head { border-left: 10px solid #D1D5DB; }
+  .arr-green .sa-shaft { background: #03C75A; }
+  .arr-green .sa-head { border-left: 10px solid #03C75A; }
+  .arr-blue .sa-shaft { background: #4285F4; }
+  .arr-blue .sa-head { border-left: 10px solid #4285F4; }
+  /* Summary bar */
+  .summary-bar {
+    background: linear-gradient(135deg, #03C75A, #059669);
+    border-radius: 12px; padding: 14px 28px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .sb-icon { font-size: 24px; }
+  .sb-main { font-size: 15px; font-weight: 800; color: #fff; }
+  .sb-sub { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+  /* Notes row */
+  .notes-row { display: flex; gap: 16px; }
+  .note-card {
+    flex: 1; background: #FFFFFF; border-radius: 10px; border: 1.5px solid #E5E7EB;
+    padding: 11px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .nc-icon { font-size: 18px; }
+  .nc-title { font-size: 12px; font-weight: 700; color: #1F2937; }
+  .nc-desc { font-size: 11px; color: #6B7280; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 13</span>
+  <h1>GitHub → Streamlit Cloud 배포 흐름</h1>
+  <span class="header-sub">코드 수정 한 번 → 자동 CI/CD 파이프라인</span>
+</div>
+
+<div class="content">
+  <div class="flow-row">
+    <!-- Step 1 -->
+    <div class="step-card step-manual">
+      <div class="step-top">
+        <div class="step-num" style="background:#9CA3AF;">1</div>
+        <span class="step-icon">💻</span>
+        <span class="step-title">로컬 코드<br>수정·저장</span>
+        <span class="step-sub">app.py 수정<br>requirements.txt 갱신</span>
+      </div>
+      <div class="step-footer">🖊️ 수동 작업</div>
+    </div>
+
+    <!-- Arrow 1 -->
+    <div class="step-arrow arr-green">
+      <div class="sa-label">수동<br>실행</div>
+      <div class="sa-arrow">
+        <div class="sa-shaft"></div>
+        <div class="sa-head"></div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-card step-push">
+      <div class="step-top">
+        <div class="step-num" style="background:#03C75A;">2</div>
+        <span class="step-icon">📤</span>
+        <span class="step-title">git push</span>
+        <span class="step-sub" style="font-family:'Courier New',monospace;font-size:10px;background:#1F2937;color:#86EFAC;padding:6px 10px;border-radius:6px;">git add .<br>git commit -m "update"<br>git push origin main</span>
+      </div>
+      <div class="step-footer">✋ 이것만 수동!</div>
+    </div>
+
+    <!-- Arrow 2 -->
+    <div class="step-arrow arr-gray">
+      <div class="sa-label">자동<br>감지</div>
+      <div class="sa-arrow">
+        <div class="sa-shaft"></div>
+        <div class="sa-head"></div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-card step-github">
+      <div class="step-top">
+        <div class="step-num" style="background:#1F2937;">3</div>
+        <span class="step-icon">🐙</span>
+        <span class="step-title">GitHub 레포</span>
+        <span class="step-sub">main 브랜치<br>코드 반영 완료</span>
+      </div>
+      <div class="step-footer">🔁 자동 트리거</div>
+    </div>
+
+    <!-- Arrow 3 -->
+    <div class="step-arrow arr-blue">
+      <div class="sa-label">자동<br>트리거</div>
+      <div class="sa-arrow">
+        <div class="sa-shaft"></div>
+        <div class="sa-head"></div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step-card step-build">
+      <div class="step-top">
+        <div class="step-num" style="background:#4285F4;">4</div>
+        <span class="step-icon">⚡</span>
+        <span class="step-title">Streamlit Cloud<br>재빌드 시작</span>
+        <span class="step-sub">requirements.txt 설치<br>패키지 의존성 해결</span>
+      </div>
+      <div class="step-footer">⏱️ ~2분 소요</div>
+    </div>
+
+    <!-- Arrow 4 -->
+    <div class="step-arrow arr-green">
+      <div class="sa-label">~2분<br>후</div>
+      <div class="sa-arrow">
+        <div class="sa-shaft"></div>
+        <div class="sa-head"></div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step-card step-deploy">
+      <div class="step-top">
+        <div class="step-num" style="background:#03C75A;">5</div>
+        <span class="step-icon">🌐</span>
+        <span class="step-title">배포 URL<br>자동 갱신</span>
+        <span class="step-sub" style="color:#065F46;font-weight:600;">share.streamlit.io/...<br>누구나 접근 가능</span>
+      </div>
+      <div class="step-footer">🚀 자동 완료!</div>
+    </div>
+  </div>
+
+  <div class="summary-bar">
+    <span class="sb-icon">🎯</span>
+    <div>
+      <div class="sb-main">코드 수정 → git push 한 번이면 2분 뒤 전체 반영</div>
+      <div class="sb-sub">수동 배포 없이 GitHub 푸시만으로 자동 업데이트 완성</div>
+    </div>
+  </div>
+
+  <div class="notes-row">
+    <div class="note-card">
+      <span class="nc-icon">🔒</span>
+      <div>
+        <div class="nc-title">.gitignore 보안</div>
+        <div class="nc-desc">실데이터·비밀키·.env 파일 → 절대 업로드 금지</div>
+      </div>
+    </div>
+    <div class="note-card">
+      <span class="nc-icon">📦</span>
+      <div>
+        <div class="nc-title">requirements.txt</div>
+        <div class="nc-desc">패키지 목록 자동 설치 — streamlit, duckdb, pandas 등</div>
+      </div>
+    </div>
+    <div class="note-card">
+      <span class="nc-icon">🌿</span>
+      <div>
+        <div class="nc-title">main 브랜치 보호</div>
+        <div class="nc-desc">개발은 feature 브랜치 → PR 병합 시 자동 배포 트리거</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

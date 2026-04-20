@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>5-key JOIN 구조</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 18px 32px 14px; display: flex; flex-direction: column; gap: 14px; }
+  .join-area {
+    flex: 1; display: flex; align-items: stretch; gap: 0;
+  }
+  /* Tables */
+  .data-table {
+    flex: 1; border-radius: 12px; overflow: hidden;
+    border: 2px solid; display: flex; flex-direction: column;
+  }
+  .table-header {
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .table-header-icon { font-size: 18px; }
+  .table-header-title { font-size: 14px; font-weight: 800; color: #fff; }
+  .table-header-sub { font-size: 11px; color: rgba(255,255,255,0.8); margin-left: auto; }
+  .table-body { background: #fff; flex: 1; padding: 10px 14px; }
+  .table-field {
+    display: flex; align-items: center; padding: 6px 8px; border-radius: 6px;
+    font-size: 12px; color: #374151; font-weight: 500; gap: 8px;
+    margin-bottom: 3px;
+  }
+  .field-key { background: #FEF9C3; border: 1px solid #FDE047; color: #713F12; font-weight: 700; }
+  .field-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .field-dot-key { background: #EAB308; }
+  .field-dot-normal { background: #D1D5DB; }
+  .tbl-channel { border-color: #03C75A; }
+  .tbl-channel .table-header { background: #03C75A; }
+  .tbl-map { border-color: #F59E0B; }
+  .tbl-map .table-header { background: #F59E0B; }
+  .tbl-af { border-color: #4285F4; }
+  .tbl-af .table-header { background: #4285F4; }
+  /* Arrows area */
+  .arrows-area {
+    width: 120px; flex-shrink: 0; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 6px; padding: 8px 4px;
+    position: relative;
+  }
+  .arrow-key {
+    display: flex; align-items: center; width: 100%; gap: 0;
+  }
+  .ak-label {
+    font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 10px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .ak-line { flex: 1; height: 2px; }
+  .ak-arrow { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; flex-shrink: 0; }
+  /* Right arrows */
+  .arrows-area-r {
+    width: 120px; flex-shrink: 0; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 6px; padding: 8px 4px;
+  }
+  /* Map box content */
+  .map-entry {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 8px; border-radius: 6px; margin-bottom: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .map-arrow { font-size: 11px; color: #9CA3AF; margin: 0 4px; }
+  .footer-bar {
+    background: #1F2937; border-radius: 10px;
+    padding: 11px 24px; display: flex; align-items: center; gap: 12px;
+  }
+  .footer-icon { font-size: 18px; }
+  .footer-text { font-size: 13px; font-weight: 700; color: #F9FAFB; }
+  .key-badges { display: flex; gap: 6px; margin-left: auto; }
+  .key-badge {
+    background: #374151; color: #D1D5DB; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 6</span>
+  <h1>5-key JOIN 구조</h1>
+  <span class="header-sub">채널 데이터 × AppsFlyer 어트리뷰션 결합</span>
+</div>
+
+<div class="content">
+  <div class="join-area">
+    <!-- Left: Channel table -->
+    <div class="data-table tbl-channel">
+      <div class="table-header">
+        <span class="table-header-icon">📱</span>
+        <span class="table-header-title">채널 데이터</span>
+        <span class="table-header-sub">광고 플랫폼 리포트</span>
+      </div>
+      <div class="table-body">
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>① 일 (date)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>② 채널 (channel)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>③ 캠페인 (campaign)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>④ 그룹 (adset)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>⑤ 소재 (creative)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>노출수 (impressions)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>클릭수 (clicks)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>비용 (cost)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>회원가입 (reg)</div>
+      </div>
+    </div>
+
+    <!-- Left arrows -->
+    <div class="arrows-area" style="width:100px;">
+      <div style="font-size:11px;font-weight:700;color:#6B7280;text-align:center;margin-bottom:4px;">JOIN KEY</div>
+      <div class="arrow-key" style="justify-content:flex-end;">
+        <span class="ak-label" style="background:#FEF9C3;color:#713F12;border:1px solid #FDE047;">① 일</span>
+        <div class="ak-line" style="background:#EAB308;"></div>
+        <div class="ak-arrow" style="border-left:8px solid #EAB308;"></div>
+      </div>
+      <div class="arrow-key" style="justify-content:flex-end;">
+        <span class="ak-label" style="background:#FEF9C3;color:#713F12;border:1px solid #FDE047;">② 채널→미디어</span>
+        <div class="ak-line" style="background:#EAB308;"></div>
+        <div class="ak-arrow" style="border-left:8px solid #EAB308;"></div>
+      </div>
+    </div>
+
+    <!-- Center: Map table -->
+    <div class="data-table tbl-map" style="max-width:200px;flex:none;width:200px;">
+      <div class="table-header">
+        <span class="table-header-icon">🗺️</span>
+        <span class="table-header-title">channel_map</span>
+      </div>
+      <div class="table-body">
+        <div style="font-size:10px;font-weight:700;color:#92400E;margin-bottom:8px;letter-spacing:0.05em;">채널명 매핑 테이블</div>
+        <div class="map-entry" style="background:#FEF3C7;">
+          <span style="color:#1F2937;">구글</span>
+          <span class="map-arrow">↔</span>
+          <span style="color:#6B7280;font-size:10px;">googleadwords_int</span>
+        </div>
+        <div class="map-entry" style="background:#FEE2E2;">
+          <span style="color:#1F2937;">메타</span>
+          <span class="map-arrow">↔</span>
+          <span style="color:#6B7280;font-size:10px;">Facebook Ads</span>
+        </div>
+        <div class="map-entry" style="background:#DCFCE7;">
+          <span style="color:#1F2937;">네이버</span>
+          <span class="map-arrow">↔</span>
+          <span style="color:#6B7280;font-size:10px;">naver_search</span>
+        </div>
+        <div style="margin-top:10px;padding:8px;background:#FEF9C3;border-radius:8px;font-size:10px;color:#92400E;font-weight:600;line-height:1.5;">
+          플랫폼마다 다른<br>미디어소스 이름을<br>표준화하는 매핑
+        </div>
+      </div>
+    </div>
+
+    <!-- Right arrows -->
+    <div class="arrows-area-r" style="width:100px;">
+      <div style="font-size:11px;font-weight:700;color:#6B7280;text-align:center;margin-bottom:4px;">매칭</div>
+      <div class="arrow-key">
+        <div class="ak-arrow" style="border-right:8px solid #EAB308;border-left:none;"></div>
+        <div class="ak-line" style="background:#EAB308;"></div>
+        <span class="ak-label" style="background:#FEF9C3;color:#713F12;border:1px solid #FDE047;">③ 캠페인</span>
+      </div>
+      <div class="arrow-key">
+        <div class="ak-arrow" style="border-right:8px solid #EAB308;border-left:none;"></div>
+        <div class="ak-line" style="background:#EAB308;"></div>
+        <span class="ak-label" style="background:#FEF9C3;color:#713F12;border:1px solid #FDE047;">④ 그룹</span>
+      </div>
+      <div class="arrow-key">
+        <div class="ak-arrow" style="border-right:8px solid #EAB308;border-left:none;"></div>
+        <div class="ak-line" style="background:#EAB308;"></div>
+        <span class="ak-label" style="background:#FEF9C3;color:#713F12;border:1px solid #FDE047;">⑤ 소재</span>
+      </div>
+    </div>
+
+    <!-- Right: AF table -->
+    <div class="data-table tbl-af">
+      <div class="table-header">
+        <span class="table-header-icon">📡</span>
+        <span class="table-header-title">AppsFlyer (MMP)</span>
+        <span class="table-header-sub">어트리뷰션 데이터</span>
+      </div>
+      <div class="table-body">
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>① 일 (date)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>② 미디어소스 (media_source)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>③ 캠페인 (campaign)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>④ 그룹 (adset)</div>
+        <div class="table-field field-key"><span class="field-dot field-dot-key"></span>⑤ 소재 (creative)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>클릭수 (clicks)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>회원가입 (installs)</div>
+        <div class="table-field"><span class="field-dot field-dot-normal"></span>구매 (purchase)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span class="footer-icon">🔑</span>
+    <span class="footer-text">5개 키가 모두 일치해야 한 쌍의 매칭된 행 — 하나라도 다르면 매칭 실패</span>
+    <div class="key-badges">
+      <span class="key-badge">① 일</span>
+      <span class="key-badge">② 채널</span>
+      <span class="key-badge">③ 캠페인</span>
+      <span class="key-badge">④ 그룹</span>
+      <span class="key-badge">⑤ 소재</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

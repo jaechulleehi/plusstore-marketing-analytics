@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>CLAUDE.md 역할</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 675px; overflow: hidden;
+    font-family: 'Pretendard', sans-serif;
+    background: #F7F8FA; display: flex; flex-direction: column;
+  }
+  .header {
+    background: #FFFFFF; border-bottom: 2px solid #E5E7EB;
+    padding: 16px 40px 12px; display: flex; align-items: center; gap: 14px;
+  }
+  .header-badge { background: #03C75A; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .header h1 { font-size: 22px; font-weight: 800; color: #1F2937; letter-spacing: -0.03em; }
+  .header-sub { font-size: 13px; color: #6B7280; font-weight: 500; margin-left: auto; }
+  .content { flex: 1; padding: 18px 40px 14px; display: flex; flex-direction: column; gap: 14px; }
+  /* Auto-load banner */
+  .autoload-bar {
+    background: #1F2937; border-radius: 10px; padding: 10px 24px;
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+  }
+  .al-step { display: flex; align-items: center; gap: 8px; color: #9CA3AF; font-size: 12px; font-weight: 600; }
+  .al-step span { font-size: 16px; }
+  .al-arrow { color: #4B5563; font-size: 18px; font-weight: 900; }
+  .al-highlight { color: #03C75A; font-weight: 800; }
+  /* Main layout */
+  .main-layout { flex: 1; display: flex; align-items: center; gap: 20px; }
+  /* Side cards */
+  .side-cards { display: flex; flex-direction: column; gap: 10px; width: 260px; flex-shrink: 0; }
+  .side-card {
+    background: #FFFFFF; border-radius: 10px; border: 1.5px solid #E5E7EB;
+    padding: 11px 14px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .sc-title { font-size: 12px; font-weight: 800; color: #1F2937; display: flex; align-items: center; gap: 6px; }
+  .sc-icon { font-size: 14px; }
+  .sc-content { font-size: 11px; color: #6B7280; line-height: 1.5; }
+  .sc-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 6px; margin: 1px; }
+  /* Arrows connecting center to sides */
+  .connector-left { display: flex; align-items: center; gap: 0; }
+  .conn-line-left { flex: 1; height: 1.5px; background: linear-gradient(90deg, #E5E7EB, #03C75A); }
+  .conn-line-right { flex: 1; height: 1.5px; background: linear-gradient(90deg, #03C75A, #E5E7EB); }
+  /* Center card */
+  .center-area { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .center-card {
+    background: #FFFFFF; border: 3px solid #03C75A; border-radius: 18px;
+    padding: 24px 32px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    box-shadow: 0 0 0 6px rgba(3,199,90,0.1);
+    min-width: 180px;
+  }
+  .center-icon { font-size: 44px; }
+  .center-title { font-size: 20px; font-weight: 900; color: #03C75A; letter-spacing: -0.02em; }
+  .center-sub { font-size: 12px; color: #6B7280; font-weight: 600; text-align: center; }
+  /* Footer note */
+  .footer-note {
+    background: #F3F4F6; border-radius: 10px; padding: 10px 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .fn-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #374151; font-weight: 600; }
+  .fn-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .fn-divider { width: 1px; height: 24px; background: #D1D5DB; margin: 0 8px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-badge">Part 8</span>
+  <h1>CLAUDE.md 역할 — AI에게 프로젝트 문맥 주입</h1>
+  <span class="header-sub">새 대화마다 자동 로드되는 프로젝트 지식</span>
+</div>
+
+<div class="content">
+  <div class="autoload-bar">
+    <div class="al-step"><span>🆕</span> 새 대화 시작</div>
+    <div class="al-arrow">→</div>
+    <div class="al-step"><span>📋</span> <span class="al-highlight">CLAUDE.md 자동 로드</span></div>
+    <div class="al-arrow">→</div>
+    <div class="al-step"><span>🧠</span> AI가 프로젝트 문맥 파악</div>
+    <div class="al-arrow">→</div>
+    <div class="al-step"><span>✅</span> 매번 설명 없이 작업 가능</div>
+  </div>
+
+  <div class="main-layout">
+    <!-- Left side cards -->
+    <div class="side-cards">
+      <div class="side-card" style="border-color:#BFDBFE;">
+        <div class="sc-title"><span class="sc-icon">🔑</span> 채널 코드 매핑</div>
+        <div class="sc-content">
+          <span class="sc-tag" style="background:#EFF6FF;color:#1E40AF;">구글 → googleadwords_int</span>
+          <span class="sc-tag" style="background:#FEE2E2;color:#991B1B;">메타 → Facebook Ads</span>
+          <span class="sc-tag" style="background:#DCFCE7;color:#166534;">네이버 → naver_search</span>
+        </div>
+      </div>
+      <div class="side-card" style="border-color:#DDD6FE;">
+        <div class="sc-title"><span class="sc-icon">🏷️</span> 소재 네이밍 컨벤션</div>
+        <div class="sc-content">
+          타입_카테고리_시즌_AB_버전<br>
+          <span class="sc-tag" style="background:#EDE9FE;color:#5B21B6;">VID_플러스멤버십_겨울_A_v2</span>
+        </div>
+      </div>
+      <div class="side-card" style="border-color:#FDE68A;">
+        <div class="sc-title"><span class="sc-icon">📈</span> ROAS 임계값</div>
+        <div class="sc-content">
+          <span class="sc-tag" style="background:#DCFCE7;color:#166534;">≥ 4.0 양호</span>
+          <span class="sc-tag" style="background:#FEF3C7;color:#92400E;">2 ~ 4 관찰</span>
+          <span class="sc-tag" style="background:#FEE2E2;color:#991B1B;">&lt; 2 개선</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Left connector lines -->
+    <div style="display:flex;flex-direction:column;gap:42px;align-items:center;">
+      <div style="width:40px;height:1.5px;background:linear-gradient(90deg,#BFDBFE,#03C75A);"></div>
+      <div style="width:40px;height:1.5px;background:linear-gradient(90deg,#DDD6FE,#03C75A);"></div>
+      <div style="width:40px;height:1.5px;background:linear-gradient(90deg,#FDE68A,#03C75A);"></div>
+    </div>
+
+    <!-- Center -->
+    <div class="center-area">
+      <div class="center-card">
+        <span class="center-icon">📋</span>
+        <span class="center-title">CLAUDE.md</span>
+        <span class="center-sub">프로젝트 영구 문맥<br>자동 로드 · 항상 적용</span>
+      </div>
+    </div>
+
+    <!-- Right connector lines -->
+    <div style="display:flex;flex-direction:column;gap:42px;align-items:center;">
+      <div style="width:40px;height:1.5px;background:linear-gradient(90deg,#03C75A,#BBF7D0);"></div>
+      <div style="width:40px;height:1.5px;background:linear-gradient(90deg,#03C75A,#FCA5A5);"></div>
+      <div style="width:40px;height:1.5px;background:linear-gradient(90deg,#03C75A,#FDE68A);"></div>
+    </div>
+
+    <!-- Right side cards -->
+    <div class="side-cards">
+      <div class="side-card" style="border-color:#BBF7D0;">
+        <div class="sc-title"><span class="sc-icon">🔗</span> 5-key JOIN 규칙</div>
+        <div class="sc-content">
+          일·채널·캠페인·그룹·소재<br>5개 키 정확 일치 필수
+        </div>
+      </div>
+      <div class="side-card" style="border-color:#FCA5A5;">
+        <div class="sc-title"><span class="sc-icon">⚠️</span> 알려진 데이터 이슈</div>
+        <div class="sc-content">
+          iOS 갭 15~25%<br>
+          네이버 로그인 경유 누락<br>
+          View-through 중복 집계
+        </div>
+      </div>
+      <div class="side-card" style="border-color:#FDE68A;">
+        <div class="sc-title"><span class="sc-icon">💬</span> 자주 쓰는 요청 패턴</div>
+        <div class="sc-content">
+          "채널별 ROAS 주간 추이"<br>
+          "소재 타입별 CPI 비교"
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <div class="fn-item">
+      <span>🌍</span>
+      <span class="fn-badge" style="background:#DBEAFE;color:#1E40AF;">글로벌</span>
+      ~/.claude/CLAUDE.md — 모든 프로젝트 공통 규칙
+    </div>
+    <div class="fn-divider"></div>
+    <div class="fn-item">
+      <span>📁</span>
+      <span class="fn-badge" style="background:#DCFCE7;color:#166534;">프로젝트</span>
+      프로젝트폴더/CLAUDE.md — 해당 프로젝트 전용 규칙 (우선 적용)
+    </div>
+  </div>
+</div>
+</body>
+</html>
