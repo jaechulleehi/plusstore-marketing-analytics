@@ -251,6 +251,31 @@ def load_joined() -> pd.DataFrame:
     return pd.concat([df, parsed], axis=1)
 
 
+# =============================================================================
+# RFM 세그먼트 데이터 + 색상 (CLAUDE.md §13)
+# =============================================================================
+# §3-1 브랜드 컬러 일부 + 의미 기반 보조 색상
+RFM_COLORS = {
+    "Champion":    "#FFB800",   # 골드 — 최고 가치
+    "Loyal":       "#03C75A",   # 네이버 그린 (§3-1 브랜드)
+    "At-Risk":     "#FF6B6B",   # 위험 빨강
+    "Hibernating": "#FF9F43",   # 주황 (At-Risk 변형)
+    "Lost":        "#999999",   # 회색
+    "New":         "#4285F4",   # 구글 블루 (§3-1 브랜드) — 신규/신선
+    "Potential":   "#9775FA",   # 보라 — 실험 풀
+}
+RFM_SEG_ORDER = ["Champion", "Loyal", "At-Risk", "Hibernating", "Lost", "New", "Potential"]
+
+
+@st.cache_data(ttl=3600, show_spinner="RFM 세그먼트 로딩 중…")
+def load_rfm() -> pd.DataFrame:
+    """`outputs/segmented_users.csv` 로드. 없으면 빈 DataFrame 반환."""
+    p = Path("outputs/segmented_users.csv")
+    if not p.exists():
+        return pd.DataFrame()
+    return pd.read_csv(p, encoding="utf-8-sig")
+
+
 df_all = load_joined()
 
 # =============================================================================
@@ -289,6 +314,14 @@ with st.sidebar:
     exclude_brand = st.toggle("브랜드KW 제외 (§6-1)", value=True)
     basis = st.radio("지표 기준", ["AF (MMP, 권장)", "채널 보고"], index=0)
     use_af = basis.startswith("AF")
+
+    st.divider()
+    st.caption("👥 RFM 세그먼트 (§12-13)")
+    snapshot_date = st.date_input(
+        "스냅샷 기준일",
+        value=pd.Timestamp("2025-03-31").date(),
+        help="§12 R/F/M 계산의 기준 시점. 변경 시 segmented_users.csv 재계산 필요.",
+    )
 
 
 # =============================================================================
@@ -480,14 +513,15 @@ st.markdown("<br>", unsafe_allow_html=True)
 # =============================================================================
 # Tabs
 # =============================================================================
-tab_home, tab_trend, tab_obj, tab_creative, tab_ab, tab_group, tab_rank, tab_raw = st.tabs([
+tab_home, tab_trend, tab_obj, tab_creative, tab_ab, tab_group, tab_rank, tab_rfm, tab_raw = st.tabs([
     "🏠 Overview",
     "📈 전체 추세",
     "🎯 목적별",
     "🎨 소재 속성",
     "🅰️🅱️ A/B",
-    "👥 타겟그룹",
+    "👤 타겟그룹",
     "🏆 랭킹",
+    "👥 RFM 세그먼트",
     "🔍 Raw 데이터",
 ])
 
@@ -914,6 +948,192 @@ with tab_rank:
                     "ROAS", format="%.2f", min_value=0,
                     max_value=float(rank["ROAS"].max() * 1.1)),
             })
+
+
+# -----------------------------------------------------------------------------
+# 👥 RFM 세그먼트 (CLAUDE.md §12-13)
+# -----------------------------------------------------------------------------
+with tab_rfm:
+    df_rfm = load_rfm()
+
+    if df_rfm.empty:
+        st.warning(
+            "🚨 `outputs/segmented_users.csv` 가 없어. "
+            "RFM 분류부터 실행해줘 (§12-13 기준)."
+        )
+        st.code(
+            "# Claude Code 에 다음 프롬프트 실행:\n"
+            '"users_2025-03-31.csv 와 purchases_2025-Q1.csv 보고\n'
+            ' CLAUDE.md 기준으로 RFM 점수 + 세그먼트 분류 해줘.\n'
+            ' 결과를 outputs/segmented_users.csv 로 저장해줘."',
+            language="bash",
+        )
+    else:
+        st.caption(
+            f"📅 스냅샷 기준일: **{snapshot_date}** · "
+            f"{len(df_rfm):,}명 · CLAUDE.md §12-13 적용"
+        )
+
+        # ===== KPI 카드 =====
+        seg_counts_kpi = df_rfm["segment"].value_counts()
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("전체", fmt_num(len(df_rfm)))
+        c2.metric("Champion 🥇", fmt_num(seg_counts_kpi.get("Champion", 0)))
+        c3.metric("Loyal 🟢", fmt_num(seg_counts_kpi.get("Loyal", 0)))
+        c4.metric("At-Risk 🔴", fmt_num(seg_counts_kpi.get("At-Risk", 0)))
+        c5.metric("평균 RFM", f"{df_rfm['RFM_total'].mean():.2f}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ===== 1. 파이차트 + 2. 히트맵 =====
+        col_pie, col_heat = st.columns([1, 1.2], gap="large")
+
+        with col_pie:
+            st.markdown("**🥧 세그먼트 분포 파이차트**")
+            seg_counts = df_rfm["segment"].value_counts()
+            pie_colors = [RFM_COLORS.get(s, "#cccccc") for s in seg_counts.index]
+            fig_pie = go.Figure(data=[go.Pie(
+                labels=seg_counts.index,
+                values=seg_counts.values,
+                marker=dict(colors=pie_colors, line=dict(color='white', width=2)),
+                hole=0.4,
+                textinfo='label+percent',
+                textposition='outside',
+                pull=[0.05 if s == "Champion" else 0 for s in seg_counts.index],
+            )])
+            fig_pie.update_layout(
+                height=420,
+                margin=dict(t=10, b=10, l=10, r=10),
+                showlegend=True,
+                legend=dict(orientation='v', x=1.02, y=0.5, font=dict(size=11)),
+                annotations=[dict(text=f'{len(df_rfm):,}명', x=0.5, y=0.5,
+                                  font=dict(size=18, color='#333'), showarrow=False)],
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        with col_heat:
+            st.markdown("**🔥 R × F_recent 히트맵 (셀 = M 평균)**")
+            heat_m = df_rfm.groupby(["R", "F_recent"])["M"].mean().unstack(fill_value=0)
+            heat_m = heat_m.reindex(index=[5, 4, 3, 2, 1],
+                                    columns=[1, 2, 3, 4, 5], fill_value=0)
+            heat_n = df_rfm.groupby(["R", "F_recent"]).size().unstack(fill_value=0)
+            heat_n = heat_n.reindex(index=[5, 4, 3, 2, 1],
+                                    columns=[1, 2, 3, 4, 5], fill_value=0)
+            text_combined = [
+                [f"M={heat_m.values[i, j]:.1f}<br>n={heat_n.values[i, j]:,}"
+                 for j in range(heat_m.shape[1])]
+                for i in range(heat_m.shape[0])
+            ]
+            fig_heat = go.Figure(data=go.Heatmap(
+                z=heat_m.values,
+                x=[f"F={c}" for c in heat_m.columns],
+                y=[f"R={r}" for r in heat_m.index],
+                colorscale='YlOrRd',
+                text=text_combined,
+                texttemplate='%{text}',
+                textfont={"size": 10},
+                colorbar=dict(title="M 평균", thickness=12),
+                hovertemplate='%{y} × %{x}<br>%{text}<extra></extra>',
+            ))
+            fig_heat.update_layout(
+                height=420,
+                margin=dict(t=10, b=20, l=40, r=40),
+                xaxis=dict(side='bottom'),
+            )
+            st.plotly_chart(fig_heat, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ===== 3. 3D 스캐터 =====
+        st.markdown("**🌐 3D 스캐터 — R × F_recent × M (세그먼트별 색)**")
+        st.caption(
+            "🖱️ 회전·확대 가능 · 성능 위해 1,500명 샘플링 (전체 "
+            f"{len(df_rfm):,}명)"
+        )
+        df_sample = df_rfm.sample(min(1500, len(df_rfm)), random_state=42)
+        # 약간의 jitter 로 점 겹침 완화 (정수 격자라 기본은 모두 겹침)
+        import numpy as _np
+        jitter = _np.random.default_rng(42)
+        df_sample = df_sample.assign(
+            R_j=df_sample["R"] + jitter.uniform(-0.2, 0.2, len(df_sample)),
+            F_j=df_sample["F_recent"] + jitter.uniform(-0.2, 0.2, len(df_sample)),
+            M_j=df_sample["M"] + jitter.uniform(-0.2, 0.2, len(df_sample)),
+        )
+        fig_3d = px.scatter_3d(
+            df_sample,
+            x="R_j", y="F_j", z="M_j",
+            color="segment",
+            color_discrete_map=RFM_COLORS,
+            category_orders={"segment": RFM_SEG_ORDER},
+            hover_data={
+                "external_id": True, "R": True, "F_recent": True, "M": True,
+                "RFM_total": True, "M_amount": ":,.0f",
+                "R_j": False, "F_j": False, "M_j": False,
+            },
+            opacity=0.75,
+            height=620,
+        )
+        fig_3d.update_traces(marker=dict(size=4, line=dict(width=0)))
+        fig_3d.update_layout(
+            margin=dict(t=10, b=10, l=10, r=10),
+            scene=dict(
+                xaxis=dict(title="R (Recency)", range=[0.5, 5.5]),
+                yaxis=dict(title="F_recent (Frequency)", range=[0.5, 5.5]),
+                zaxis=dict(title="M (Monetary)", range=[0.5, 5.5]),
+                camera=dict(eye=dict(x=1.6, y=1.6, z=1.0)),
+            ),
+            legend=dict(title="세그먼트", font=dict(size=11)),
+        )
+        st.plotly_chart(fig_3d, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ===== 4. 세그먼트별 다운로드 =====
+        st.markdown("**📥 세그먼트별 CSV 다운로드**")
+        st.caption(
+            "각 세그먼트별 user 목록 다운로드 → Braze Canvas 타겟 업로드용. "
+            "1차 액션 톤은 §13 매트릭스 따름."
+        )
+        dl_cols = st.columns(len(RFM_SEG_ORDER))
+        for col, seg in zip(dl_cols, RFM_SEG_ORDER):
+            with col:
+                sub = df_rfm[df_rfm["segment"] == seg]
+                count = len(sub)
+                seg_color = RFM_COLORS.get(seg, "#cccccc")
+                st.markdown(
+                    f"<div style='border-left: 4px solid {seg_color}; "
+                    f"padding-left: 8px; margin-bottom: 4px;'>"
+                    f"<b style='color:{seg_color};'>{seg}</b><br>"
+                    f"<span style='font-size:1.2rem; font-weight:bold;'>{count:,}</span>"
+                    f"<span style='color:#888; font-size:0.85rem;'> 명</span>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+                if count > 0:
+                    csv_data = sub.to_csv(index=False, encoding="utf-8-sig"
+                                          ).encode("utf-8-sig")
+                    st.download_button(
+                        "📥 CSV",
+                        data=csv_data,
+                        file_name=f"segment_{seg}_{snapshot_date}.csv",
+                        mime="text/csv",
+                        key=f"dl_seg_{seg}",
+                        use_container_width=True,
+                    )
+                else:
+                    st.caption("_없음_")
+
+        # 전체 다운로드
+        st.markdown("---")
+        all_csv = df_rfm.to_csv(index=False, encoding="utf-8-sig"
+                                ).encode("utf-8-sig")
+        st.download_button(
+            "📥 전체 segmented_users.csv 다운로드",
+            data=all_csv,
+            file_name=f"segmented_users_{snapshot_date}.csv",
+            mime="text/csv",
+            type="primary",
+        )
 
 
 # -----------------------------------------------------------------------------

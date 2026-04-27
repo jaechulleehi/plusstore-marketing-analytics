@@ -23,3 +23,6 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 강사 전용 (수강생 배포 금지)
+docs/answer_key.md
