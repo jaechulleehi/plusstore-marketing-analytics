@@ -335,9 +335,179 @@ marketing-analytics/
 
 ---
 
+## 12. RFM 스코어링 기준 (네이버 플러스 스토어) ⭐
+
+> CRM 세그멘테이션의 표준 정의. 모든 RFM 분석·세그먼트 산출은 이 기준을 단일 진실로 따름.
+
+**기준 시점**: 스냅샷 기준일 (기본: 오늘)
+**적용 데이터**: `raw/braze/users_*.csv`
+
+### 12-1. R (Recency) — 마지막 구매로부터 경과 일수
+
+| R 점수 | 범위 |
+|---|---|
+| 5 | 0 ~ 30일 |
+| 4 | 31 ~ 60일 |
+| 3 | 61 ~ 90일 |
+| 2 | 91 ~ 180일 |
+| 1 | 181일 이상 또는 구매 이력 없음 |
+
+### 12-2. F (Frequency) — 두 윈도우로 분리
+
+**왜 두 개?** 90일만 보면 "**과거 활성 → 최근 휴면**" 유저(At-Risk·Hibernating)를 잡을 수 없음. 두 신호를 분리해 사용.
+
+#### F_recent — 최근 90일 구매 횟수 (Champion·Loyal 평가용)
+
+| F_recent | 범위 |
+|---|---|
+| 5 | 10회 이상 |
+| 4 | 4 ~ 9회 |
+| 3 | 2 ~ 3회 |
+| 2 | 1회 |
+| 1 | 0회 |
+
+#### F_total — 라이프타임 누적 구매 횟수 (At-Risk·Hibernating 평가용)
+
+| F_total | 범위 |
+|---|---|
+| 5 | 50회 이상 |
+| 4 | 20 ~ 49회 |
+| 3 | 5 ~ 19회 |
+| 2 | 1 ~ 4회 |
+| 1 | 0회 (이력 없음) |
+
+**현재 데이터 한계**: `purchases_*.csv` 가 Q1만 보유 → F_total ≈ F_recent. 라이프타임 데이터 연결 시 분리됨.
+임시 proxy: `last_purchase_at != null` AND `days_since_purchase ≤ 365` → 최소 F_total ≥ 2 가정.
+
+### 12-3. M (Monetary) — 최근 90일 구매 총액 (quintile)
+
+- 전체 구매자 중 **상위 20%씩 분위** 나눠서 5~1점 부여
+- 구매 이력이 **0원인 유저는 M=1** (분위 계산에서 제외)
+- 절대 금액 임계값 대신 **상대 분위**를 쓰는 이유: 시즌·프로모션에 따라 매출 분포가 크게 변해도 세그먼트 비율을 안정적으로 유지
+
+### 12-4. 산출 데이터
+
+```
+outputs/segmented_users.csv
+  external_id, R, F, M, RFM_total, segment
+```
+
+> 세그먼트 매핑(7종: Champion / Loyal / At-Risk / Hibernating / Lost / New / Potential)은
+> §13 정의 매트릭스 따름. `users._segment_truth` 컬럼으로 정확도 검증.
+
+---
+
+## 13. 세그먼트 정의 매트릭스 ⭐
+
+![7 세그먼트 매트릭스 — 조건과 액션](https://raw.githubusercontent.com/jaechulleehi/plusstore-marketing-analytics/add-3week-2-images/docs/images/3week-2/3w2_02_segments.png)
+
+> §12 의 R·F·M 점수를 기반으로 7개 세그먼트로 라벨링. 우선순위는 **위에서 아래**로 평가 (먼저 매칭되는 세그먼트로 확정).
+
+| 세그먼트 | 조건 | 액션 | 1차 톤 (§15) |
+|---|---|---|---|
+| **Champion** | R ≥ 4 AND F_recent ≥ 4 AND M ≥ 4 | VIP 인정, 신상 선공개 | VIP |
+| **Loyal** | R ≥ 3 AND F_recent ≥ 4 | 혜택 강화, 적립 배증 | 혜택 |
+| **At-Risk** | R = 2 AND has_history | 돌아올 이유 (쿠폰) 제공 | 긴급 + 쿠폰 |
+| **Hibernating** ⚠️ | At-Risk 의 하위그룹: M_lifetime ≥ 3 | 감성 리엔게이지 | 감성 |
+| **Lost** | R = 1 | 저비용 최소 접촉 | 혜택 (저강도) |
+| **New** | signup ≤ 30일 AND F_recent ≤ 1 | 온보딩 여정 | 감성 |
+| **Potential** | 나머지 (R = 2-3 AND F_recent ≤ 1 AND no history) | 실험 대상 풀 | 혜택 (테스트) |
+
+> ⚠️ **Hibernating ↔ At-Risk 분리**는 M_lifetime 가용 시에만. 현재 90일만 있는 sample 에서는 둘을 합쳐 **At-Risk 단일 세그먼트**로 운용 → 액션은 "긴급+쿠폰" 기본, 보조로 감성 톤 A/B.
+
+### 13-1. 우선순위 평가 로직 (의사코드)
+
+```python
+def classify(row):
+    R, F_recent, F_total, M = row.R, row.F_recent, row.F_total, row.M
+    signup_days = row.signup_days
+    has_history = row.last_purchase_at is not None  # F_total proxy
+
+    if signup_days <= 30 and F_recent <= 1:
+        return "New"
+    if R >= 4 and F_recent >= 4 and M >= 4:
+        return "Champion"
+    if R >= 3 and F_recent >= 4:
+        return "Loyal"
+    if R == 1:
+        return "Lost"
+    if R == 2 and has_history:
+        # M_lifetime 데이터 가용 시 Hibernating 분리
+        if row.M_lifetime >= 3:
+            return "Hibernating"
+        return "At-Risk"
+    return "Potential"
+```
+
+### 13-2. 검증 기준 + 데이터 한계 노트
+
+- `users._segment_truth` 와 비교해 **세그먼트별 정확도 ≥ 95%** 가 정상
+- 95% 미만이면 §12 임계값 또는 §13 우선순위 로직 점검
+- **현재 sample 데이터 한계**: F_total·M_lifetime 부재 → At-Risk 와 Hibernating 구분 어려움. 합쳐서 약 80% 정확도가 현실적 상한. 라이프타임 purchases 연결 후 §13 재검증.
+
+---
+
+## 15. 카피 톤 가이드 (네플 브랜드 보이스) ⭐
+
+> 모든 CRM 카피는 아래 4톤 중 하나로 분류. 라운드 실험으로 검증된 (세그먼트 × 톤) 매칭은 §17 학습 로그에 누적.
+
+### 15-1. 브랜드 보이스 공통 원칙
+
+- **존댓말 기본**, 친근하지만 과하지 않게
+- **한 메시지 = 한 CTA** (행동 1개만 요청)
+- **숫자·기간은 구체적으로**: "최대 40%", "오늘 자정까지", "5,000원 즉시 적립"
+- **이모지 1개**: 톤당 한 개 정해서 일관성 유지
+
+### 15-2. 4가지 톤 정의
+
+| 톤 | 핵심 키워드 | 본문 스타일 | 적합 세그먼트 | 피해야 할 표현 |
+|---|---|---|---|---|
+| **혜택** 💸 | 할인·적립·쿠폰 | "지금 사면 X원 절약" 명확한 절감액 | Loyal, Potential, Lost | 감정어 ("감사합니다" 류) |
+| **VIP** ⭐ | 선공개·한정·특별 | "OO님께만 먼저" 인정·우대 | Champion, Loyal | 일반 할인 언급 (격 ↓) |
+| **긴급** ⏰ | 마감·재고·시간 | "오늘 자정까지", "단 5개" | At-Risk, Hibernating | 협박조 ("놓치면 큰일") |
+| **감성** 💜 | 추억·취향·계절 | 스토리·라이프스타일 | Hibernating, New | 가격 강조 (톤 충돌) |
+
+### 15-3. 톤 × 세그먼트 우선 매칭 (§17 학습 결과 반영)
+
+```
+Champion     → VIP (1순위) > 감성
+Loyal        → 혜택 (1순위) > VIP
+At-Risk      → 긴급 + 쿠폰 (1순위) > 혜택
+Hibernating  → 감성 (1순위) > 혜택
+Lost         → 혜택 (저강도, 저비용 최소 접촉)
+New          → 감성 (1순위, 온보딩 스토리텔링)
+Potential    → 혜택 (실험 대상)
+```
+
+### 15-4. 카피 작성 제약사항
+
+| 항목 | 규칙 |
+|---|---|
+| **Push 제목 길이** | ≤ 30자 (iOS 알림 잘림 방지) |
+| **Push 본문 길이** | ≤ 80자 (안드로이드 잘림 방지) |
+| **이모지 위치** | 제목 앞 1개 (혜택💸 / VIP⭐ / 긴급⏰ / 감성💜) |
+| **금액 표기** | `5,000원` (콤마, 한국식) |
+| **금기어** | "꼭", "반드시", "놓치지 마세요" 남발 → 신뢰도 ↓ |
+| **링크** | UTM 필수 (`utm_campaign={campaign_id}`) |
+
+### 15-5. 톤별 카피 예시
+
+```
+[혜택 💸]  이번 주 플러스 회원만 최대 40% 할인 + 적립 2배
+[VIP ⭐]   고마워요, 플러스 VIP. 신상 먼저 보세요
+[긴급 ⏰]   오늘 자정까지! 5,000원 적립금 만료
+[감성 💜]   봄, 새 시작. 당신의 첫 플러스 쇼핑을 응원해요
+```
+
+> 💡 §14 는 **Sub-agent 병렬 실행 규칙** 자리 (4주차에 정의 예정).
+> §16-17 은 카피 실험 로그·학습 누적용 (실험 진행하며 채워짐).
+
+---
+
 ## 📝 이 문서 업데이트 원칙
 
 - 새 회사 룰 확정 → 여기에 바로 반영 (Claude에게 "CLAUDE.md에 추가해줘")
 - 지표 임계값 변경 → §5-4 수정
 - 신규 채널 추가 → §3-1 채널 코드 매핑 업데이트
 - 데이터 이슈 발견 → §7 에 추가해서 재발 방지
+- RFM 기준값 조정 → §12 수정 (재구매 주기 변동 시)
